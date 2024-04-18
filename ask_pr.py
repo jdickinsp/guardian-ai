@@ -32,16 +32,16 @@ def extract_pr_and_repo(url):
             "repo_name": f"{org_name}/{repo_name}"
         }
     else:
-        # Log a warning if the URL format is not correct
         print("Warning: The URL format is not correct.")
         return None
 
 
-def get_pr_review_per_diff(pr_number, repo_name, system_prompt):
-    pr_diffs = get_github_pr_diff(pr_number, repo_name)
+def get_pr_review_per_diff(pr_number, repo_name, prompt):
+    pr = get_github_pr_diff(pr_number, repo_name)
+    system_prompt = f"Your message is a diff of a PR. PR Title:{pr.title}\nPR Description:{pr.body}\n{prompt}\n"
     reviews = []
-    for diff in pr_diffs:
-        message = diff
+    for diff in pr.patches:
+        message = f"{diff}"
         response = client.chat.completions.create(
             messages=[
                 {"role": "system", "content": system_prompt},
@@ -60,10 +60,9 @@ def get_pr_review_per_diff(pr_number, repo_name, system_prompt):
 
 
 def get_pr_review(pr_number, repo_name, prompt):
-    pr_diffs = get_github_pr_diff(pr_number, repo_name)
-    content_diff = [diff for diff in pr_diffs]
-    message = "\n".join(content_diff)
-    system_prompt = f"Your message is a diff of a PR. \n{prompt}\n"
+    pr = get_github_pr_diff(pr_number, repo_name)
+    system_prompt = f"Your message is a diff of a PR. PR Title:{pr.title}\nPR Description:{pr.body}\n{prompt}\n"
+    message = "\n".join(pr.patches)
     response = client.chat.completions.create(
         messages=[
             {"role": "system", "content": system_prompt},
@@ -87,7 +86,7 @@ def cli():
     # Add arguments
     parser.add_argument("--pr_url", help="Pull Request Github Url", required=True)
     parser.add_argument("--prompt_template", help="Prompt Template", required=False)
-    parser.add_argument("--prompt", help="Prompt", required=False, default=SYSTEM_PROMPTS_FOR_CODE['code-review-short'])
+    parser.add_argument("--prompt", help="Prompt", required=False, default=SYSTEM_PROMPTS_FOR_CODE['code-review'])
     parser.add_argument("--per_file", help="Per File", action="store_true", required=False)
 
     # Parse the arguments
@@ -103,6 +102,9 @@ def cli():
     print("PR:", args.pr_url)
     if prompt_template:
         prompt = SYSTEM_PROMPTS_FOR_CODE.get(prompt_template)
+        if not prompt:
+            print(f"Error: Invalid prompt template.")
+            return
         print("Prompt-Template:", prompt_template)
     else:
         print("Prompt:", prompt)
@@ -110,7 +112,7 @@ def cli():
     if args.per_file:
         reviews = get_pr_review_per_diff(pr_number, repo_name, prompt)
         for code, review in reviews:
-            print("Code:", code)
+            print("Content:\n", code)
             print("Response:\n", review)
             print("\n")
     else:

@@ -41,7 +41,7 @@ To use the Guardian AI, follow these steps:
    Replace `<PR_URL>` with the URL of the GitHub Pull Request you want to review.
 
 4. Optionally, you can specify additional parameters:
-   - `--prompt_template`: Choose a predefined prompt template. Available options are `'code-review-short'`, `'code-review'`, `'pr-summary'` etc.
+   - `--prompt_template`: Choose a predefined prompt template. Available options are `'code-summary'`, `'code-review'`, `'code-checklist'`, `'code-smells'`, `'code-debate'`, `'code-summary-verbose'`, `'code-review-verbose'` etc.
    - `--prompt`: Provide a custom prompt for the code review.
    - `--per_file`: Specify this flag if you want to get a separate review per file changed in the Pull Request.
 
@@ -58,17 +58,17 @@ To use the Guardian AI, follow these steps:
 
 - Get a summary of the Pull Request:
   ```
-  python ask_pr.py --pr_url="https://github.com/karpathy/llm.c/pull/150" --prompt_template='pr-summary'
+  python ask_pr.py --pr_url="https://github.com/karpathy/llm.c/pull/155" --prompt_template='code-summary'
   ```
 
 - Specify a custom prompt:
   ```
-  python ask_pr.py --pr_url="https://github.com/karpathy/llm.c/pull/150" --prompt="Write a summary of the PR"
+  python ask_pr.py --pr_url="https://github.com/karpathy/llm.c/pull/155" --prompt="Write a summary of the PR"
   ```
 
 - Get a separate review per file changed in the Pull Request:
   ```
-  python ask_pr.py --pr_url="https://github.com/karpathy/llm.c/pull/150" --per_file
+  python ask_pr.py --pr_url="https://github.com/karpathy/llm.c/pull/155" --per_file
   ```
 
 
