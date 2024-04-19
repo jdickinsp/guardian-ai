@@ -4,7 +4,7 @@ import re
 from typing import NamedTuple
 from openai import OpenAI
 
-from code_prompts import SYSTEM_PROMPTS_FOR_CODE
+from code_prompts import DEFAULT_PROMPT_OPTIONS, CODE_PROMPTS, SYSTEM_PROMPT_ENDING
 from github_api import get_github_pr_diff
 
 ReviewResponse = NamedTuple("Review", [("message", str), ("response", str)])
@@ -36,45 +36,46 @@ def extract_pr_and_repo(url):
         return None
 
 
-def get_pr_review_per_diff(pr_number, repo_name, prompt):
+def get_pr_review_per_patch(pr_number, repo_name, prompt=None, prompt_template=None):
+    prompt_options = DEFAULT_PROMPT_OPTIONS
+    if prompt_template:
+        prompt_options = prompt_template.get('options') or DEFAULT_PROMPT_OPTIONS
+        system_prompt = prompt_template.get('system_prompt')
+    else:
+        system_prompt = f"{prompt}\n{SYSTEM_PROMPT_ENDING}"
     pr = get_github_pr_diff(pr_number, repo_name)
-    system_prompt = f"Your message is a diff of a PR. PR Title:{pr.title}\nPR Description:{pr.body}\n{prompt}\n"
     reviews = []
-    for diff in pr.patches:
-        message = f"{diff}"
+    for patch in pr.patches:
+        message = f"```{patch}```"
         response = client.chat.completions.create(
-            messages=[
-                {"role": "system", "content": system_prompt},
-                {
-                    "role": "user",
-                    "content": message,
-                }
-            ],
             model="gpt-3.5-turbo",
-            top_p=0.9,
-            temperature=1.0,
-            max_tokens=4094,
+            messages=[
+                { "role": "system", "content": system_prompt },
+                { "role": "user", "content": message }
+            ],
+            **prompt_options,
         )
         reviews.append(ReviewResponse(message=message,response=response.choices[0].message.content.strip()))
     return reviews
 
 
-def get_pr_review(pr_number, repo_name, prompt):
+def get_pr_review(pr_number, repo_name, prompt=None, prompt_template=None):
+    prompt_options = DEFAULT_PROMPT_OPTIONS
+    if prompt_template:
+        prompt_options = prompt_template.get('options') or DEFAULT_PROMPT_OPTIONS
+        system_prompt = prompt_template.get('system_prompt')
+    else:
+        system_prompt = f"{prompt}\n{SYSTEM_PROMPT_ENDING}"
     pr = get_github_pr_diff(pr_number, repo_name)
-    system_prompt = f"Your message is a diff of a PR. PR Title:{pr.title}\nPR Description:{pr.body}\n{prompt}\n"
-    message = "\n".join(pr.patches)
+    patches = "\n".join(pr.patches)
+    message = f"```{patches}```"
     response = client.chat.completions.create(
-        messages=[
-            {"role": "system", "content": system_prompt},
-            {
-                "role": "user",
-                "content": message,
-            }
-        ],
         model="gpt-4-turbo",
-        top_p=0.9,
-        temperature=1.0,
-        max_tokens=4094,
+        messages=[
+            { "role": "system", "content": system_prompt },
+            { "role": "user", "content": message }
+        ],
+        **prompt_options,
     )
     review = ReviewResponse(message=message, response=response.choices[0].message.content.strip())
     return review
@@ -86,7 +87,7 @@ def cli():
     # Add arguments
     parser.add_argument("--pr_url", help="Pull Request Github Url", required=True)
     parser.add_argument("--prompt_template", help="Prompt Template", required=False)
-    parser.add_argument("--prompt", help="Prompt", required=False, default=SYSTEM_PROMPTS_FOR_CODE['code-review'])
+    parser.add_argument("--prompt", help="Prompt", required=False, default=CODE_PROMPTS['code-review'])
     parser.add_argument("--per_file", help="Per File", action="store_true", required=False)
 
     # Parse the arguments
@@ -100,9 +101,10 @@ def cli():
     prompt = args.prompt
 
     print("PR:", args.pr_url)
+    code_prompt = None
     if prompt_template:
-        prompt = SYSTEM_PROMPTS_FOR_CODE.get(prompt_template)
-        if not prompt:
+        code_prompt = CODE_PROMPTS.get(prompt_template)
+        if not code_prompt:
             print(f"Error: Invalid prompt template.")
             return
         print("Prompt-Template:", prompt_template)
@@ -110,13 +112,13 @@ def cli():
         print("Prompt:", prompt)
 
     if args.per_file:
-        reviews = get_pr_review_per_diff(pr_number, repo_name, prompt)
+        reviews = get_pr_review_per_patch(pr_number, repo_name, prompt, code_prompt)
         for code, review in reviews:
             print("Content:\n", code)
             print("Response:\n", review)
             print("\n")
     else:
-        pr_review = get_pr_review(pr_number, repo_name, prompt)
+        pr_review = get_pr_review(pr_number, repo_name, prompt, code_prompt)
         print("Response:\n", pr_review.response)
         print("\n")
 
