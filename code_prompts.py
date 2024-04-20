@@ -199,7 +199,7 @@ DEFAULT_PROMPT_OPTIONS = {
 CODE_CHECKLIST_SETTINGS = {
     'top_p': 0.9,
     'temperature': 0.7,
-    'max_tokens': 2000,
+    'max_tokens': 1500,
     'n': 1,
     'stop': ['```'],
     'presence_penalty': 0.2,
@@ -210,7 +210,7 @@ CODE_CHECKLIST_SETTINGS = {
 CODE_DEBATE_SETTINGS = {
     'top_p': 0.9,
     'temperature': 0.8,
-    'max_tokens': 2000,
+    'max_tokens': 1500,
     'n': 1,
     'presence_penalty': 0.5,
     'frequency_penalty': 0.2,
@@ -242,9 +242,8 @@ CODE_REVIEW_SETTINGS = {
 CODE_SMELLS_SETTINGS = {
     'top_p': 0.9,
     'temperature': 0.4,
-    'max_tokens': 2000,
+    'max_tokens': 1500,
     'n': 1,
-    'stop': ['```'],
     'presence_penalty': 0.1,
     'frequency_penalty': 0.3,
 }

@@ -1,7 +1,7 @@
 # Guardian AI
 
 Welcome to Guardian AI!
-This is a Python script designed to facilitate code review processes by extracting information from GitHub Pull Request URLs and generating prompts for code review feedback. This README provides instructions on how to get started with the script.
+This is a Python script designed to facilitate code review processes by extracting information from GitHub Pull Request, GitHub Branch or GitHub Commit URLs and generating prompts for feedback. This README provides instructions on how to get started with the script.
 
 ## Prerequisites
 
@@ -35,10 +35,10 @@ To use the Guardian AI, follow these steps:
 3. Run the script using the following command:
 
    ```
-   python ask_pr.py --pr_url="<PR_URL>"
+   python ask_diff.py --url="<GITHUB_URL>"
    ```
 
-   Replace `<PR_URL>` with the URL of the GitHub Pull Request you want to review.
+   Replace `<GITHUB_URL>` with the URL of the GitHub Pull Request, Branch or Commit you want to review.
 
 4. Optionally, you can specify additional parameters:
    - `--prompt_template`: Choose a predefined prompt template. Available options are `'code-checklist'`, `'code-debate'`, `'code-refactor'`, `'code-review'`, `'code-review-verbose'`, `'code-smells'`, `'code-summary'`, `'pr-description'` etc.
@@ -47,7 +47,7 @@ To use the Guardian AI, follow these steps:
 
    Example with additional parameters:
    ```
-   python ask_pr.py --pr_url="<PR_URL>" --prompt="Write a summary of the PR" --per_file
+   python ask_diff.py --pr_url="<PR_URL>" --prompt="Write a summary of the PR" --per_file
    ```
 
 5. The script will extract information from the provided Pull Request URL, generate prompts for code review feedback, and display the response.
@@ -58,19 +58,23 @@ To use the Guardian AI, follow these steps:
 
 - Get a summary of the Pull Request:
   ```
-  python ask_pr.py --pr_url="https://github.com/karpathy/llm.c/pull/155" --prompt_template='code-summary'
+  python ask_diff.py --url="https://github.com/karpathy/llm.c/pull/155" --prompt_template='code-summary'
   ```
 
 - Specify a custom prompt:
   ```
-  python ask_pr.py --pr_url="https://github.com/karpathy/llm.c/pull/155" --prompt="Write a summary of the PR"
+  python ask_diff.py --url="https://github.com/karpathy/llm.c/pull/155" --prompt="Write a summary of the PR"
   ```
 
-- Get a separate review per file changed in the Pull Request:
+- Get a separate review per file changed in the Branch:
   ```
-  python ask_pr.py --pr_url="https://github.com/karpathy/llm.c/pull/155" --prompt_template='code-review' --per_file
+  python ask_diff.py --url="https://github.com/lancerts/llm.c/tree/const-fix-matmul_b" --prompt_template='code-review' --per_file
   ```
 
+- Get a code smells of the Commit:
+  ```
+  python ask_diff.py --url="https://github.com/karpathy/llm.c/commit/8cf66fbb845665dabacba992e8a92631132a58d8" --prompt_template='code-smells'
+  ```
 
 ## License
 
