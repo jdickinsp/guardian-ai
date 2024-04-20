@@ -62,10 +62,7 @@ def extract_repo_and_pr_number(url):
 
 
 def get_github_pr_diff(pr_number, repo_name):
-    api_key = os.environ.get("GITHUB_ACCESS_TOKEN")
-    auth = Auth.Token(api_key)
-
-    g = Github(auth=auth)
+    g = Github(auth=Auth.Token(os.getenv("GITHUB_ACCESS_TOKEN")))
     repo = g.get_repo(repo_name)
     pr = repo.get_pull(pr_number)
     pr_description = pr.body
@@ -108,10 +105,7 @@ def extract_repo_and_branch_name(url):
 
 
 def get_github_branch_diff(repo_name, compare_branch, base_branch=None):
-    api_key = os.environ.get("GITHUB_ACCESS_TOKEN")
-    auth = Auth.Token(api_key)
-
-    g = Github(auth=auth)
+    g = Github(auth=Auth.Token(os.getenv("GITHUB_ACCESS_TOKEN")))
     repo = g.get_repo(repo_name)
 
     if base_branch is None:
@@ -154,10 +148,7 @@ def extract_repo_and_commit_hash(url):
 
 
 def get_github_commit_diff(repo_name, commit_hash):
-    api_key = os.environ.get("GITHUB_ACCESS_TOKEN")
-    auth = Auth.Token(api_key)
-
-    g = Github(auth=auth)
+    g = Github(auth=Auth.Token(os.getenv("GITHUB_ACCESS_TOKEN")))
     repo = g.get_repo(repo_name)
 
     commit = repo.get_commit(sha=commit_hash)
