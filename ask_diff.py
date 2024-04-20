@@ -19,7 +19,7 @@ from github_api import (
 from llm_client import LLMClient, LLMType, get_default_llm_model_name, string_to_enum
 
 
-ReviewResponse = NamedTuple("Review", [("message", str), ("response", str)])
+ReviewResponse = NamedTuple("Review", [("message", str), ("response", str), ("file_name", str)])
 
 
 # git_diff can be a BranchDiff, CommitDiff or PullRequestDiff
@@ -33,22 +33,52 @@ async def review_git_diff(llm_client, git_diff, prompt=None, prompt_template=Non
     patches = git_diff.contents if whole_file else git_diff.patches
     reviews = []
     if per_file:
-        for patch in patches:
+        for idx, patch in enumerate(patches):
             message = f"```{patch}```"
             if per_file:
                 print("Content:\n", message)
             resp = await llm_client.chat(system_prompt, message, prompt_options)
             if llm_client.stream is False:
                 print("Response:\n", resp)
-            reviews.append(ReviewResponse(message=message, response=resp))
+            reviews.append(ReviewResponse(message=message, response=resp, file_name=git_diff.file_names[idx]))
     else:
+        file_names = " ".join(git_diff.file_names)
         patch = "\n".join(patches)
         message = f"```{patch}```"
         resp = await llm_client.chat(system_prompt, message, prompt_options)
         if llm_client.stream is False:
             print("Response:\n", resp)
-        reviews.append(ReviewResponse(message=message, response=resp))
+        reviews.append(ReviewResponse(message=message, response=resp, file_name=file_names))
     return reviews
+
+
+async def ask_diff(github_url, client_type, model_name, prompt, prompt_template,
+                   stream=False, per_file=False, whole_file=False, base_branch=None):
+    code_prompt = None
+    if prompt is None or prompt == '' and prompt_template is None or prompt_template == '':
+        raise Exception('Error: No prompt or prompt_template')
+    if prompt is None or prompt == "" and prompt_template:
+        code_prompt = CODE_PROMPTS.get(prompt_template)
+        if not code_prompt:
+            raise Exception(f"Error: Invalid prompt_template")
+
+    git_diff = None
+    github_url_type = identify_github_url_type(github_url)
+
+    if github_url_type is GitHubURLType.PULL_REQUEST:
+        info = extract_repo_and_pr_number(github_url)
+        git_diff = get_github_pr_diff(info['pr_number'], info['repo_name'])
+    elif github_url_type is GitHubURLType.BRANCH:
+        info = extract_repo_and_branch_name(github_url)
+        git_diff = get_github_branch_diff(info['repo_name'], info['branch'], base_branch)
+    elif github_url_type is GitHubURLType.COMMIT:
+        info = extract_repo_and_commit_hash(github_url)
+        git_diff = get_github_commit_diff(info['repo_name'], info['commit_hash'])
+    else:
+        raise Exception(f"Error: Invalid github url")
+    
+    llm_client = LLMClient(client_type, model_name, stream=stream)
+    return await review_git_diff(llm_client, git_diff, prompt, code_prompt, per_file, whole_file)
 
 
 async def cli():
@@ -73,6 +103,8 @@ async def cli():
     stream = args.stream
     model_name = args.model
     client_type = args.client
+    github_url = args.url
+    base_branch = args.base_branch
 
     if client_type is None:
         client_type = string_to_enum(LLMType, os.getenv('DEFAULT_LLM_CLIENT', "openai"))
@@ -82,33 +114,14 @@ async def cli():
 
     print("Client:", client_type.name.lower())
     print("Model:", model_name)
-    print("Url:", args.url)
-    code_prompt = None
+    print("Url:", github_url)
     if prompt_template:
-        code_prompt = CODE_PROMPTS.get(prompt_template)
-        if not code_prompt:
-            raise Exception(f"Error: Invalid prompt template")
         print("Prompt-Template:", prompt_template)
     else:
         print("Prompt:", prompt)
-
-    git_diff = None
-    github_url_type = identify_github_url_type(args.url)
-
-    if github_url_type is GitHubURLType.PULL_REQUEST:
-        info = extract_repo_and_pr_number(args.url)
-        git_diff = get_github_pr_diff(info['pr_number'], info['repo_name'])
-    elif github_url_type is GitHubURLType.BRANCH:
-        info = extract_repo_and_branch_name(args.url)
-        git_diff = get_github_branch_diff(info['repo_name'], info['branch'], args.base_branch)
-    elif github_url_type is GitHubURLType.COMMIT:
-        info = extract_repo_and_commit_hash(args.url)
-        git_diff = get_github_commit_diff(info['repo_name'], info['commit_hash'])
-    else:
-        raise Exception(f"Error: Invalid github url for --url argument")
     
-    llm_client = LLMClient(client_type, model_name, stream=stream)
-    await review_git_diff(llm_client, git_diff, prompt, code_prompt, per_file, whole_file)
+    await ask_diff(github_url, client_type, model_name, prompt, prompt_template,
+                   stream, per_file, whole_file, base_branch)
 
 
 if __name__ == "__main__": 
