@@ -47,7 +47,7 @@ To use the Guardian AI, follow these steps:
 
    Example with additional parameters:
    ```
-   python ask_diff.py --pr_url="<PR_URL>" --prompt="Write a summary of the PR" --per_file
+   python ask_diff.py --url="<GITHUB_URL>" --prompt="Write a summary of the PR" --per_file
    ```
 
 5. The script will extract information from the provided Pull Request URL, generate prompts for code review feedback, and display the response.
