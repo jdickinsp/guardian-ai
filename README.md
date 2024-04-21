@@ -1,7 +1,7 @@
 # Guardian AI
 
 Welcome to Guardian AI!
-This is a Python script designed to facilitate code review processes by extracting information from GitHub Pull Request, GitHub Branch or GitHub Commit URLs and generating prompts for feedback. This README provides instructions on how to get started with the script.
+This is a Python script designed to facilitate code review processes by extracting information from GitHub Pull Request, GitHub Branch or GitHub Commit URLs and generating prompts for feedback. This README provides instructions on how to get started with the script and app.
 
 ## Prerequisites
 
@@ -29,7 +29,6 @@ Before using the Guardian AI, ensure that you have the following installed on yo
     OPENAI_API_KEY=<your_openai_api_key>
     GITHUB_ACCESS_TOKEN=<your_github_access_token>
     DEFAULT_LLM_CLIENT=<openai,ollama>
-    DEFAULT_LLM_MODEL=<gtp-3.5-turbo,llama3>
     ```
 
 ## Getting Started
@@ -49,7 +48,10 @@ To use the Guardian AI, follow these steps:
    Replace `<GITHUB_URL>` with the URL of the GitHub Pull Request, Branch or Commit you want to review.
 
 4. Optionally, you can specify additional parameters:
-   - `--prompt_template`: Choose a predefined prompt template. Available options are `'code-checklist'`, `'code-debate'`, `'code-refactor'`, `'code-review'`, `'code-review-verbose'`, `'code-smells'`, `'code-summary'`, `'pr-description'` etc.
+   - `--prompt_template`: Choose a predefined prompt template. Available options are `'code-checklist'`,
+   `'code-debate'`, `'code-refactor'`, `'code-review'`, `'code-review-verbose'`, `'code-smells'`, 
+   `'code-summary'`, `'pr-description'`, `'explain-lines'`, `'explain-lines-verbose'`, 
+   `'doc-strings'`, `'doc-markdown'` etc.
    - `--prompt`: Provide a custom prompt for the code review.
    - `--per_file`: Flag for separate review per file changed.
    - `--whole_file`: Flag for review of the whole file.
@@ -86,6 +88,11 @@ To use the Guardian AI, follow these steps:
 - Get a code review of the Commit:
   ```
   python ask_diff.py --url=https://github.com/karpathy/llm.c/commit/8cf66fbb845665dabacba992e8a92631132a58d8 --prompt_template=code-review --stream --client=ollama --model=llama3
+  ```
+
+- Run the webapp
+  ```
+  python -m streamlit run app.py
   ```
 
 ## License

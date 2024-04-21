@@ -3,3 +3,4 @@ PyGithub
 requests
 ollama
 python-dotenv
+streamlit
