@@ -2,6 +2,7 @@ import asyncio
 import os
 from dotenv import load_dotenv
 import streamlit as st
+import streamlit.components.v1 as components
 
 from ask_diff import ask_diff
 from detect import get_programming_language
@@ -21,6 +22,82 @@ def init_session_state():
 
 # Initialize session state
 st.session_state = init_session_state()
+
+
+def display_diff_with_diff2html(diff):
+    escaped_diff = diff.replace("`", "\\`").replace("${", "${'$'}{")
+    html_content = f"""
+    <html>
+    <head>
+        <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/diff2html/bundles/css/diff2html.min.css">
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.4.0/styles/github.min.css">
+    </head>
+    <body>
+        <div id="diff-container"></div>
+        <script src="https://cdn.jsdelivr.net/npm/diff2html/bundles/js/diff2html.min.js"></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.4.0/highlight.min.js"></script>
+        <script>
+        document.addEventListener('DOMContentLoaded', function() {{
+            var diffString = `{escaped_diff}`;
+            var targetElement = document.getElementById('diff-container');
+            var html = Diff2Html.html(diffString, {{
+                drawFileList: true,
+                matching: 'lines',
+                outputFormat: 'line-by-line',
+                synchronisedScroll: true,
+                drawFileList: false
+            }});
+            targetElement.innerHTML = html;
+
+            // Manually trigger highlight.js on the diff output
+            document.querySelectorAll('pre code').forEach((block) => {{
+                hljs.highlightBlock(block);
+            }});
+        }});
+        </script>
+    </body>
+    </html>
+    """
+    components.html(html_content, height=800, scrolling=True)
+
+
+def display_code_with_highlightjs(code, language="python"):
+    html_content = f"""
+    <html>
+    <head>
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.4.0/styles/github.min.css">
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.4.0/highlight.min.js"></script>
+        <script src="https://cdn.jsdelivr.net/npm/highlightjs-line-numbers.js/dist/highlightjs-line-numbers.min.js"></script>
+        <style>
+            .hljs-ln-numbers {{
+                -webkit-touch-callout: none;
+                -webkit-user-select: none;
+                -khtml-user-select: none;
+                -moz-user-select: none;
+                -ms-user-select: none;
+                user-select: none;
+
+                text-align: left;
+                color: #ccc;
+                vertical-align: top;
+                padding-right: 5px;
+                color: #bbb;
+            }}
+        </style>
+    </head>
+    <body>
+        <pre><code class="{language}">{code}</code></pre>
+        <script>
+            document.addEventListener('DOMContentLoaded', function() {{
+                hljs.highlightAll();
+                hljs.initLineNumbersOnLoad();
+            }});
+        </script>
+    </body>
+    </html>
+    """
+    components.html(html_content, height=800, scrolling=True)
+
 
 async def main():
     st.markdown("""
@@ -43,7 +120,7 @@ async def main():
     per_file_checked = st.checkbox("Per File", True)
     whole_file_checked = st.checkbox("Whole File", False)
 
-    button_clicked = st.button("Get Review")
+    button_clicked = st.button("Get Response")
 
     client_type = string_to_enum(LLMType, os.getenv('DEFAULT_LLM_CLIENT', "openai"))
     model_name = os.getenv('DEFAULT_LLM_MODEL', get_default_llm_model_name(client_type))
@@ -61,23 +138,32 @@ async def main():
             code = diffs.contents[idx] if whole_file_checked else patch
             with col1:
                 st.write(f"**{file_name}**")
-                if whole_file_checked:
-                    st.code(code, language=prog_language, line_numbers=True)
+                if code[:4] == 'diff':
+                    tab1, tab2 = st.tabs(["✨ Diff", "📄 Code"])
+                    with tab1:
+                        display_diff_with_diff2html(code)
+                    with tab2:
+                        display_code_with_highlightjs(diffs.contents[idx], prog_language)
                 else:
-                    st.code(code, language=prog_language, line_numbers=False)
+                    tab1 = st.tabs(["📄 Code"])
+                    display_code_with_highlightjs(code, prog_language)
 
             with col2:
                 st.write(f"**{file_name}**")
-                sys_out = col2.empty()
-                key = f"ai_comment_{idx}"
-                if key not in st.session_state:
-                    st.session_state[key] = "Loading AI comments..."
-                    patch = diffs.contents[idx] if whole_file_checked else diffs.patches[idx]
-                    placeholder = st.empty().text('Processing...') if not stream_checked else None
-                    await ask_diff(patch, client_type, model_name, sys_out, prompt_input, prompt_template_selected,
-                        False, stream_checked)
-                    if placeholder:
-                        placeholder.empty() 
+                tab1, tab2 = st.tabs(["📝 Response", "💬 Chat"])
+                with tab1:
+                    sys_out = col2.empty()
+                    key = f"ai_comment_{idx}"
+                    if key not in st.session_state:
+                        st.session_state[key] = "Loading AI comments..."
+                        patch = diffs.contents[idx] if whole_file_checked else diffs.patches[idx]
+                        placeholder = st.empty().text('Processing...') if not stream_checked else None
+                        await ask_diff(patch, client_type, model_name, sys_out, prompt_input, prompt_template_selected,
+                                False, stream_checked)
+                        if placeholder:
+                            placeholder.empty()
+                with tab2:
+                    pass
 
 
 if __name__ == "__main__":

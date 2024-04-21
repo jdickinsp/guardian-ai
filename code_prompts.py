@@ -265,9 +265,9 @@ CODE_SMELLS_SETTINGS = {
 CODE_SUMMARY_SETTINGS = {
     'top_p': 0.9,
     'temperature': 0.7,
-    'max_tokens': 250,
+    'max_tokens': 400,
     'n': 1,
-    'stop': ['```'],
+    # 'stop': ['```'],
     'presence_penalty': 0.1,
     'frequency_penalty': 0.3,
 }

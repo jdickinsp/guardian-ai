@@ -98,7 +98,8 @@ async def cli():
 
     if per_file:
         for idx, _  in enumerate(git_diff.patches):
-            patch = git_diff.contents[idx] if whole_file else git_diff.patches[idx]
+            patch = git_diff.diff_headers[idx]
+            patch += git_diff.contents[idx] if whole_file else git_diff.patches[idx]
             await ask_diff(patch, client_type, model_name, sys_out, prompt, prompt_template,
                    command_line, stream)
     else:

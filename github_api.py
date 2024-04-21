@@ -3,8 +3,7 @@ from enum import Enum
 import os
 import itertools
 import re
-from github import Github
-from github import Auth
+from github import Github, Auth
 
 
 BranchDiff = namedtuple("BranchDiff", ["repo_name", "base_branch", "compare_branch", "file_names", "patches", "contents"])
@@ -61,6 +60,15 @@ def extract_repo_and_pr_number(url):
         return None
 
 
+def get_diff_header(file):
+    return (
+        f"diff --git a/{file.filename} b/{file.filename}\n"
+        f"index {file.sha[:7]}..{file.sha[:7]} 100644\n"  # sha and mode are not directly available, so we use file.sha as placeholder
+        f"--- a/{file.filename}\n"
+        f"+++ b/{file.filename}\n"
+    )
+
+
 def get_github_pr_diff(pr_number, repo_name):
     g = Github(auth=Auth.Token(os.getenv("GITHUB_ACCESS_TOKEN")))
     repo = g.get_repo(repo_name)
@@ -76,15 +84,15 @@ def get_github_pr_diff(pr_number, repo_name):
 
     for file in files:
         path = file.filename
-        file_names.append(path)
         try:
             content = repo.get_contents(path, ref=head_sha)
             if content.encoding == "base64":
                 file_content = content.decoded_content.decode()
                 contents.append(file_content)
+                patches.append(get_diff_header(file) + file.patch)
+                file_names.append(path)
         except Exception as e:
             print(f"Error retrieving content for {path}: {str(e)}")
-        patches.append(file.patch)
 
     return PullRequestDiff(repo_name, pr_number, pr_title, pr_description, file_names, patches, contents)
 
@@ -124,15 +132,15 @@ def get_github_branch_diff(repo_name, compare_branch, base_branch=None):
     
     for file in comparison.files:
         path = file.filename
-        file_names.append(path)
         try:
             content = repo.get_contents(path, ref=compare_branch)
             if content.encoding == "base64":
                 file_content = content.decoded_content.decode()
                 contents.append(file_content)
+                patches.append(get_diff_header(file) + file.patch)
+                file_names.append(path)
         except Exception as e:
             print(f"Error retrieving content for {path}: {str(e)}")
-        patches.append(file.patch)
 
     return BranchDiff(repo_name, base_branch, compare_branch, file_names, patches, contents)
 
@@ -165,15 +173,15 @@ def get_github_commit_diff(repo_name, commit_hash):
     
     for file in commit.files:
         path = file.filename
-        file_names.append(path)
         try:
             content = repo.get_contents(path, ref=commit_hash)
             if content.encoding == "base64":
                 file_content = content.decoded_content.decode()
                 contents.append(file_content)
+                patches.append(get_diff_header(file) + file.patch)
+                file_names.append(path)
         except Exception as e:
             print(f"Error retrieving content for {path}: {str(e)}")
-        patches.append(file.patch)
 
     return CommitDiff(repo_name, commit_hash, file_names, patches, contents)
 
@@ -197,7 +205,8 @@ def fetch_git_diffs(github_url, base_branch=None):
 
 
 if __name__ == "__main__":
-    # pr_diff = get_github_pr_diff(155, "karpathy/llm.c")
-    # print(pr_diff.title)
-    branch_diff = get_github_branch_diff("karpathy/llm.c", "feature/cublaslt")
-    print(branch_diff)
+    pr_diff = get_github_pr_diff(155, "karpathy/llm.c")
+    for p in pr_diff.patches:
+        print(p)
+    # branch_diff = get_github_branch_diff("karpathy/llm.c", "feature/cublaslt")
+    # print(branch_diff)
