@@ -252,7 +252,6 @@ CODE_REVIEW_SETTINGS = {
     'frequency_penalty': 0.3,
 }
 
-
 CODE_SMELLS_SETTINGS = {
     'top_p': 0.9,
     'temperature': 0.4,
@@ -269,6 +268,16 @@ CODE_SUMMARY_SETTINGS = {
     'max_tokens': 250,
     'n': 1,
     'stop': ['```'],
+    'presence_penalty': 0.1,
+    'frequency_penalty': 0.3,
+}
+
+
+DOC_STRINGS_SETTINGS = {
+    'top_p': 0.9,
+    'temperature': 0.2,
+    'max_tokens': 1500,
+    'n': 1,
     'presence_penalty': 0.1,
     'frequency_penalty': 0.3,
 }
@@ -303,12 +312,12 @@ CODE_PROMPTS = {
     'doc-strings': {
         'type': 'review',
         'system_prompt': DOC_STRINGS_PROMPT,
-        'options': CODE_REVIEW_SETTINGS
+        'options': DOC_STRINGS_SETTINGS
     },
     'doc-markdown': {
         'type': 'review',
         'system_prompt': DOC_MARKDOWN_PROMPT,
-        'options': CODE_REVIEW_SETTINGS
+        'options': DOC_STRINGS_SETTINGS
     },
     'explain-lines': {
         'type': 'review',
@@ -318,6 +327,6 @@ CODE_PROMPTS = {
     'unit-test': {
         'type': 'review',
         'system_prompt': UNIT_TEST_PROMPT,
-        'options': CODE_REVIEW_SETTINGS
+        'options': DOC_STRINGS_SETTINGS
     }
 }
