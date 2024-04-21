@@ -175,6 +175,24 @@ def get_github_commit_diff(repo_name, commit_hash):
     return CommitDiff(repo_name, commit_hash, file_names, patches, contents)
 
 
+def fetch_git_diffs(github_url, base_branch=None):
+    diffs = None
+    github_url_type = identify_github_url_type(github_url)
+
+    if github_url_type is GitHubURLType.PULL_REQUEST:
+        info = extract_repo_and_pr_number(github_url)
+        diffs = get_github_pr_diff(info['pr_number'], info['repo_name'])
+    elif github_url_type is GitHubURLType.BRANCH:
+        info = extract_repo_and_branch_name(github_url)
+        diffs = get_github_branch_diff(info['repo_name'], info['branch'], base_branch)
+    elif github_url_type is GitHubURLType.COMMIT:
+        info = extract_repo_and_commit_hash(github_url)
+        diffs = get_github_commit_diff(info['repo_name'], info['commit_hash'])
+    else:
+        raise Exception(f"Error: Invalid github url")
+    return diffs
+
+
 if __name__ == "__main__":
     # pr_diff = get_github_pr_diff(155, "karpathy/llm.c")
     # print(pr_diff.title)

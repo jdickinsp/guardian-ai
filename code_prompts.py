@@ -188,6 +188,113 @@ When generating the pull request description, follow these guidelines:
 Please generate the pull request description with a "Main Changes" section based on the provided git diff, following the above guidelines. The git diff will be provided in the next message, enclosed in triple backticks (```).
 """
 
+EXPLAIN_LINES_PROMPT = """
+Explain the code line by line.
+
+Please generate the line by line explainations based on the provided git diff, following the above guidelines. The git diff will be provided in the next message, enclosed in triple backticks (```).
+"""
+
+EXPLAIN_LINES_VERBOSE_PROMPT = """
+Title: Line-by-Line Code Explanation
+
+Description:
+Please provide a detailed line-by-line explanation of the code changes based on the provided git diff. For each modified file, focus on the changed lines and explain the following:
+
+1. Purpose: Describe the purpose or intention behind each code change.
+2. Functionality: Explain how the modified code works and what it achieves.
+3. Impact: Discuss the impact of the code change on the overall functionality or behavior of the program.
+4. Dependencies: Mention any dependencies or related code that is affected by the change.
+5. Improvements: Highlight any improvements, optimizations, or best practices introduced by the code change.
+6. Potential Issues: Identify any potential issues, edge cases, or areas that may require further attention or testing.
+
+Please organize the explanation by file and provide a clear and concise description for each changed line. Use code snippets or references to specific line numbers when necessary to provide context.
+
+If there are any questions, concerns, or areas that need further clarification, please mention them in your explanation.
+
+The git diff will be provided in the next message, enclosed in triple backticks (```).
+"""
+
+DOC_STRINGS_PROMPT = """
+Title: Generate Inline Function Doc Strings
+
+Description:
+Please generate detailed and informative inline doc strings for each function present in the provided git diff. The doc strings should be placed directly within the code, immediately before the function definition. Follow these guidelines:
+
+Inline Doc Strings:
+1. Function Description: Provide a clear and concise description of what the function does and its purpose within the codebase.
+
+2. Parameters:
+   - List all the parameters accepted by the function.
+   - For each parameter, specify its name, data type, and a brief description of what it represents.
+   - Indicate if a parameter is optional and mention its default value, if applicable.
+
+3. Return Value:
+   - Specify the data type of the value returned by the function, if any.
+   - Briefly describe what the returned value represents.
+
+4. Raises (Exceptions):
+   - If the function explicitly raises any exceptions, list them along with a brief explanation of when and why they are raised.
+
+Please format the inline doc strings using the conventions and style guidelines of the project or the chosen documentation format (e.g., Google-style, NumPy-style, etc.).
+
+Ignore any non-code text or changes in the git diff and focus solely on generating inline doc strings for the functions.
+
+Ignore README.md or readme.md files.
+
+The git diff will be provided in the next message, enclosed in triple backticks (```).
+"""
+
+DOC_MARKDOWN_PROMPT = """
+Title: Generate Function Documentation in Markdown
+
+Description:
+Please generate detailed and informative documentation for each function present in the provided git diff. Create a separate markdown section for each function, titled with the function name. Include the following information in each section:
+
+1. Function Signature:
+   - Specify the function name and its parameter list.
+   - Indicate the data type of each parameter.
+   - Mention if a parameter is optional and provide its default value, if applicable.
+
+2. Function Description:
+   - Provide a detailed description of what the function does and its purpose within the codebase.
+   - Explain the function's behavior and any important algorithmic details.
+   - Mention any assumptions or preconditions that the function relies on.
+
+3. Parameters:
+   - Describe each parameter in detail.
+   - Explain the meaning and purpose of each parameter.
+   - Specify any constraints, valid ranges, or expected formats for the parameters.
+   - Mention if a parameter is optional and provide its default value, if applicable.
+
+4. Return Value:
+   - Specify the data type of the value returned by the function, if any.
+   - Describe what the returned value represents and how it relates to the function's purpose.
+   - Mention any special cases or conditions that affect the returned value.
+   - If the function does not return a value, mention that explicitly.
+
+5. Raises (Exceptions):
+   - If the function explicitly raises any exceptions, list them along with a detailed explanation of when and why they are raised.
+   - Describe how to handle or catch the exceptions if necessary.
+   - Provide examples of error messages or exception types that may be raised.
+
+6. Example Usage:
+   - Provide one or more examples demonstrating how to use the function correctly.
+   - Include sample input values and the expected output or behavior.
+   - Explain the purpose and outcome of each example.
+   - Use code snippets or pseudocode to illustrate the usage.
+
+7. Additional Notes:
+   - Mention any important considerations, assumptions, or constraints related to the function.
+   - Highlight any dependencies or side effects that the function may have.
+   - Provide any additional information that would be helpful for understanding and using the function effectively.
+   - Include references to related functions or modules if applicable.
+
+Please organize the markdown documentation in a clear and structured manner, using appropriate headings, subheadings, and formatting conventions. Use proper markdown syntax for code snippets, links, and emphasis.
+
+Ignore any non-code text or changes in the git diff and focus solely on generating markdown documentation for the functions.
+
+The git diff will be provided in the next message, enclosed in triple backticks (```).
+"""
 
 DEFAULT_PROMPT_OPTIONS = {
     'top_p': 0.9,
@@ -300,5 +407,25 @@ CODE_PROMPTS = {
         'type': 'summary',
         'system_prompt': PR_DESCRIPTION_PROMPT,
         'options': CODE_SUMMARY_SETTINGS
-    }
+    },
+    'explain-lines': {
+        'type': 'review',
+        'system_prompt': EXPLAIN_LINES_PROMPT,
+        'options': DEFAULT_PROMPT_OPTIONS
+    },
+    'explain-lines-verbose': {
+        'type': 'review',
+        'system_prompt': EXPLAIN_LINES_VERBOSE_PROMPT,
+        'options': DEFAULT_PROMPT_OPTIONS
+    },
+    'doc-strings': {
+        'type': 'summary',
+        'system_prompt': DOC_STRINGS_PROMPT,
+        'options': CODE_SUMMARY_SETTINGS
+    },
+    'doc-markdown': {
+        'type': 'summary',
+        'system_prompt': DOC_MARKDOWN_PROMPT,
+        'options': CODE_SUMMARY_SETTINGS
+    },
 }
