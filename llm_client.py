@@ -34,7 +34,7 @@ class LLMClient(ABC):
     async def async_chat(self, system_prompt, user_message, prompt_options, sys_out, command_line):
         pass
 
-    def chat(self, system_prompt, user_message, prompt_options):
+    def chat(self, system_prompt, user_message, prompt_options, sys_out=None):
         pass
 
 
@@ -67,7 +67,7 @@ class OpenAIClient(LLMClient):
                     sys_out.write(streamed_text)
         return None
 
-    def chat(self, system_prompt, user_message, prompt_options):
+    def chat(self, system_prompt, user_message, prompt_options, sys_out=None):
         resp = self.client.chat.completions.create(
             model=self.model_name,
             messages=[
@@ -77,6 +77,8 @@ class OpenAIClient(LLMClient):
             **prompt_options,
         )
         message = resp.choices[0].message.content.strip()
+        if sys_out:
+            sys_out.write(message)
         return message
 
 
@@ -110,7 +112,7 @@ class OllamaClient(LLMClient):
                     sys_out.write(streamed_text)
         return None
 
-    def chat(self, system_prompt, user_message, prompt_options):
+    def chat(self, system_prompt, user_message, prompt_options, sys_out=None):
         content = LLAMA_3_TEMPLATE(system=system_prompt, message=user_message)
         resp = self.client.chat(
             model=self.model_name,
@@ -122,5 +124,7 @@ class OllamaClient(LLMClient):
             },
         )
         message = resp['message']['content']
+        if sys_out:
+            sys_out.write(message)
         return message.strip()
 

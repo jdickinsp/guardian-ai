@@ -29,11 +29,11 @@ async def ask_diff(patch, client_type, model_name, sys_out, prompt, prompt_templ
         raise Exception('not a valid client_type')
 
     prompt_options = DEFAULT_PROMPT_OPTIONS
-    if prompt_template:
+    if prompt:
+        system_prompt = f"{prompt}\n{SYSTEM_PROMPT_ENDING}"
+    else:
         prompt_options = code_prompt.get('options') or DEFAULT_PROMPT_OPTIONS
         system_prompt = code_prompt.get('system_prompt')
-    else:
-        system_prompt = f"{prompt}\n{SYSTEM_PROMPT_ENDING}"
 
     if command_line:
         sys_out.write(message)
@@ -43,7 +43,7 @@ async def ask_diff(patch, client_type, model_name, sys_out, prompt, prompt_templ
     if stream:
         await llm_client.async_chat(system_prompt, message, prompt_options, sys_out, command_line)
     else:
-        resp = llm_client.chat(system_prompt, message, prompt_options)
+        resp = llm_client.chat(system_prompt, message, prompt_options, sys_out)
         if command_line:
             sys_out.write(resp)
             sys_out.write("\n")
@@ -56,11 +56,11 @@ async def cli():
 
     parser.add_argument("--url", help="Github Url for Pull Request, Branch or Commit", required=True)
     parser.add_argument("--base_branch", help="Base Branch", required=False)
-    parser.add_argument("--prompt_template", help="Prompt Template", required=False, default='code-review')
+    parser.add_argument("--prompt_template", help="Prompt Template", required=False)
     parser.add_argument("--prompt", help="Prompt", required=False)
     parser.add_argument("--per_file", help="Per File", action="store_true", required=False)
     parser.add_argument("--whole_file", help="Whole File", action="store_true", required=False)
-    parser.add_argument("--stream", help="Stream", action="store_true", required=False, default=True)
+    parser.add_argument("--stream_off", help="Stream Off", action="store_true", required=False)
     parser.add_argument("--model", help="Model", required=False)
     parser.add_argument("--client", help="Client Type", required=False, type=LLMType)
 
@@ -69,7 +69,7 @@ async def cli():
     prompt = args.prompt
     per_file = args.per_file
     whole_file = args.whole_file
-    stream = args.stream
+    stream = not args.stream_off
     model_name = args.model
     client_type = args.client
     github_url = args.url
@@ -80,6 +80,9 @@ async def cli():
 
     if model_name is None:
         model_name = get_default_llm_model_name(client_type)
+    
+    if prompt is None and prompt_template is None:
+        prompt_template = 'code-review'
 
     sys.stdout.write(f"Client: {client_type.name}")
     sys.stdout.write(f"Model: {model_name}")

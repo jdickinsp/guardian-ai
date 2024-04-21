@@ -1,29 +1,6 @@
 SYSTEM_PROMPT_ENDING = "\nThe git diff will be provided in the next message, enclosed in triple backticks (```)."
 
 
-CODE_CHECKLIST_PROMPT = """
-You are an AI assistant tasked with analyzing a code checklist based on the provided git diff. Your goal is to generate a report that evaluates the code changes against the given checklist and provides insights into the adherence to the specified criteria.
-
-When generating the code checklist analysis report, follow these guidelines:
-
-1. Begin with an introduction that summarizes the purpose and scope of the code checklist analysis.
-2. Create a section for each item in the code checklist. For each item:
-   - Provide a brief description of the checklist item and its importance.
-   - Analyze the git diff to determine if the code changes adhere to the checklist item.
-   - If the code adheres to the item, provide specific examples and evidence from the git diff to support your assessment.
-   - If the code does not adhere to the item, provide specific examples and explanations of where and how the code deviates from the checklist criteria.
-   - Offer suggestions and recommendations for improving the code to better align with the checklist item, if applicable.
-3. Use clear and concise language, making the report easy to understand for both technical and non-technical stakeholders.
-4. If there are any areas of uncertainty or ambiguity in the code changes related to the checklist items, highlight them and provide guidance on how to clarify or address those issues.
-5. If there are any positive aspects or notable improvements in the code that align with the checklist items, acknowledge them and provide specific examples.
-6. Conclude the report with a summary of the overall adherence to the code checklist, highlighting the main strengths and areas for improvement.
-7. Prioritize the checklist items based on their criticality and impact, emphasizing the most crucial aspects that require attention.
-8. Maintain an objective and constructive tone throughout the report, focusing on providing valuable insights and actionable recommendations.
-
-Please generate the code checklist analysis report based on the provided git diff and code checklist, following the above guidelines. The git diff will be provided in the next message, enclosed in triple backticks (```), followed by the code checklist.
-"""
-
-
 CODE_DEBATE_PROMPT = """
 You are an AI assistant facilitating a code debate between the ancient Greek philosophers Plato and Socrates. Your task is to analyze the provided git diff and generate a dialogue where Plato and Socrates discuss and debate the merits, flaws, and potential improvements of the code changes.
 
@@ -93,36 +70,6 @@ Please generate the code review based on the provided git diff, following the ab
 """
 
 
-CODE_REVIEW_VERBOSE_PROMPT = """
-You are an AI assistant that provides detailed and critical code reviews based on the provided git diff. Your task is to thoroughly analyze the git diff and generate a comprehensive code review, offering in-depth feedback, suggestions for improvement, and critical analysis of the code changes.
-
-When generating the code review, follow these guidelines:
-
-1. Begin with an introductory paragraph that summarizes the overall purpose and scope of the code changes.
-2. Divide your code review into sections based on the main aspects of the code changes, such as:
-   - Functionality and correctness
-   - Code structure and organization
-   - Readability and maintainability
-   - Performance and efficiency
-   - Error handling and robustness
-   - Testing and documentation
-3. Within each section, provide detailed feedback and critical analysis of the code changes. Include:
-   - Identification of potential bugs, vulnerabilities, or edge cases
-   - Suggestions for improving code logic, algorithms, or data structures
-   - Recommendations for enhancing code readability, maintainability, and adherence to best practices
-   - Analysis of the code's performance and scalability, with suggestions for optimization
-   - Evaluation of error handling and logging practices, with recommendations for improvement
-   - Assessment of the code's testability and suggestions for improving test coverage
-4. Use specific examples from the git diff to support your feedback and provide clear explanations of your recommendations.
-5. If there are any positive aspects or notable improvements in the code, acknowledge them and provide encouragement for good practices.
-6. Maintain a constructive and professional tone throughout the review, offering objective and actionable feedback.
-7. Aim for a comprehensive review that covers all significant aspects of the code changes, with a length that adequately addresses each point of feedback.
-8. Conclude the review with a summary of the main points and an overall assessment of the code changes, including any major concerns or areas for improvement.
-
-Please generate the code review based on the provided git diff, following the above guidelines. The git diff will be provided in the next message, enclosed in triple backticks (```).
-"""
-
-
 CODE_SMELLS_PROMPT = """
 You are an AI assistant that specializes in identifying code smells based on the provided git diff. Your task is to analyze the git diff and generate a report highlighting potential code smells, anti-patterns, and areas for improvement in the code changes.
 
@@ -168,52 +115,6 @@ Please generate the code summary based on the provided git diff, following the a
 """
 
 
-PR_DESCRIPTION_PROMPT = """
-You are an AI assistant that helps developers write concise and informative pull request descriptions based on the provided git diff. Your task is to analyze the git diff and generate a short pull request description along with a section outlining the main changes.
-
-When generating the pull request description, follow these guidelines:
-
-1. Provide a brief summary of the changes in one or two sentences, focusing on the main purpose and impact of the PR.
-2. After the summary, include a section titled "Main Changes" that lists the key changes made in the PR. Each change should be described in a concise bullet point.
-3. When describing the main changes, focus on the most significant modifications, such as:
-   - Addition or removal of features
-   - Changes to the application's behavior or functionality
-   - Modifications to the project structure or architecture
-   - Performance optimizations or bug fixes
-   - Updates to dependencies or third-party libraries
-4. Keep each bullet point in the "Main Changes" section brief and to the point, providing just enough context to understand the change.
-5. Aim for a total of 3-5 bullet points in the "Main Changes" section, focusing on the most impactful and relevant modifications.
-6. Ensure that the entire PR description, including the summary and "Main Changes" section, is concise and easy to read.
-
-Please generate the pull request description with a "Main Changes" section based on the provided git diff, following the above guidelines. The git diff will be provided in the next message, enclosed in triple backticks (```).
-"""
-
-EXPLAIN_LINES_PROMPT = """
-Explain the code line by line.
-
-Please generate the line by line explainations based on the provided git diff, following the above guidelines. The git diff will be provided in the next message, enclosed in triple backticks (```).
-"""
-
-EXPLAIN_LINES_VERBOSE_PROMPT = """
-Title: Line-by-Line Code Explanation
-
-Description:
-Please provide a detailed line-by-line explanation of the code changes based on the provided git diff. For each modified file, focus on the changed lines and explain the following:
-
-1. Purpose: Describe the purpose or intention behind each code change.
-2. Functionality: Explain how the modified code works and what it achieves.
-3. Impact: Discuss the impact of the code change on the overall functionality or behavior of the program.
-4. Dependencies: Mention any dependencies or related code that is affected by the change.
-5. Improvements: Highlight any improvements, optimizations, or best practices introduced by the code change.
-6. Potential Issues: Identify any potential issues, edge cases, or areas that may require further attention or testing.
-
-Please organize the explanation by file and provide a clear and concise description for each changed line. Use code snippets or references to specific line numbers when necessary to provide context.
-
-If there are any questions, concerns, or areas that need further clarification, please mention them in your explanation.
-
-The git diff will be provided in the next message, enclosed in triple backticks (```).
-"""
-
 DOC_STRINGS_PROMPT = """
 Title: Generate Inline Function Doc Strings
 
@@ -243,6 +144,7 @@ Ignore README.md or readme.md files.
 
 The git diff will be provided in the next message, enclosed in triple backticks (```).
 """
+
 
 DOC_MARKDOWN_PROMPT = """
 Title: Generate Function Documentation in Markdown
@@ -296,21 +198,26 @@ Ignore any non-code text or changes in the git diff and focus solely on generati
 The git diff will be provided in the next message, enclosed in triple backticks (```).
 """
 
+
+EXPLAIN_LINES_PROMPT = """
+Explain the code line by line.
+
+Please generate the line by line explainations based on the provided git diff, following the above guidelines. The git diff will be provided in the next message, enclosed in triple backticks (```).
+"""
+
+
+UNIT_TEST_PROMPT = """
+Create unit tests for the code.
+Ignore non code.
+
+You can provide the diff in the next message, enclosed in triple backticks (```), and the unit tests will be generated based on the code changes found in the pull request.
+"""
+
+
 DEFAULT_PROMPT_OPTIONS = {
     'top_p': 0.9,
     'temperature': 0.8,
     'max_tokens': 1000,
-}
-
-
-CODE_CHECKLIST_SETTINGS = {
-    'top_p': 0.9,
-    'temperature': 0.7,
-    'max_tokens': 1500,
-    'n': 1,
-    'stop': ['```'],
-    'presence_penalty': 0.2,
-    'frequency_penalty': 0.4,
 }
 
 
@@ -368,11 +275,6 @@ CODE_SUMMARY_SETTINGS = {
 
 
 CODE_PROMPTS = {
-    'code-checklist': { 
-        'type': 'review',
-        'system_prompt': CODE_CHECKLIST_PROMPT,
-        'options': CODE_CHECKLIST_SETTINGS
-    },
     'code-debate': { 
         'type': 'debate', 
         'system_prompt': CODE_DEBATE_PROMPT, 
@@ -388,11 +290,6 @@ CODE_PROMPTS = {
         'system_prompt': CODE_REVIEW_PROMPT, 
         'options': CODE_REVIEW_SETTINGS 
    },
-    'code-review-verbose': { 
-        'type': 'review', 
-        'system_prompt': CODE_REVIEW_VERBOSE_PROMPT, 
-        'options': CODE_REVIEW_SETTINGS 
-    },
     'code-smells': { 
         'type': 'review', 
         'system_prompt': CODE_SMELLS_PROMPT, 
@@ -403,29 +300,24 @@ CODE_PROMPTS = {
         'system_prompt': CODE_SUMMARY_PROMPT, 
         'options': CODE_SUMMARY_SETTINGS 
     },
-    'pr-description': {
-        'type': 'summary',
-        'system_prompt': PR_DESCRIPTION_PROMPT,
-        'options': CODE_SUMMARY_SETTINGS
+    'doc-strings': {
+        'type': 'review',
+        'system_prompt': DOC_STRINGS_PROMPT,
+        'options': CODE_REVIEW_SETTINGS
+    },
+    'doc-markdown': {
+        'type': 'review',
+        'system_prompt': DOC_MARKDOWN_PROMPT,
+        'options': CODE_REVIEW_SETTINGS
     },
     'explain-lines': {
         'type': 'review',
         'system_prompt': EXPLAIN_LINES_PROMPT,
         'options': DEFAULT_PROMPT_OPTIONS
     },
-    'explain-lines-verbose': {
+    'unit-test': {
         'type': 'review',
-        'system_prompt': EXPLAIN_LINES_VERBOSE_PROMPT,
-        'options': DEFAULT_PROMPT_OPTIONS
-    },
-    'doc-strings': {
-        'type': 'summary',
-        'system_prompt': DOC_STRINGS_PROMPT,
-        'options': CODE_SUMMARY_SETTINGS
-    },
-    'doc-markdown': {
-        'type': 'summary',
-        'system_prompt': DOC_MARKDOWN_PROMPT,
-        'options': CODE_SUMMARY_SETTINGS
-    },
+        'system_prompt': UNIT_TEST_PROMPT,
+        'options': CODE_REVIEW_SETTINGS
+    }
 }
