@@ -84,13 +84,13 @@ async def cli():
     if prompt is None and prompt_template is None:
         prompt_template = 'code-review'
 
-    sys.stdout.write(f"Client: {client_type.name}")
-    sys.stdout.write(f"Model: {model_name}")
-    sys.stdout.write(f"Url: {github_url}")
+    sys.stdout.write(f"Client: {client_type.name.lower()}\n")
+    sys.stdout.write(f"Model: {model_name}\n")
+    sys.stdout.write(f"Url: {github_url}\n")
     if prompt_template:
-        sys.stdout.write(f"Prompt-Template: {prompt_template}")
+        sys.stdout.write(f"Prompt-Template: {prompt_template}\n")
     else:
-        sys.stdout.write(f"Prompt: {prompt}")
+        sys.stdout.write(f"Prompt: {prompt}\n")
     
     sys_out = sys.stdout
     git_diff = fetch_git_diffs(github_url, base_branch)

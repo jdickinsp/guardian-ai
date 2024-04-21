@@ -118,6 +118,9 @@ def get_github_branch_diff(repo_name, compare_branch, base_branch=None):
     file_names = []
     contents = []
     patches = []
+
+    if len(comparison.files) == 0:
+        raise Exception('compare branch is not different than base branch')
     
     for file in comparison.files:
         path = file.filename
