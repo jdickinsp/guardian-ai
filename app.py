@@ -4,7 +4,7 @@ from dotenv import load_dotenv
 import streamlit as st
 import streamlit.components.v1 as components
 
-from ask_diff import ask_diff
+from ask_diff import ChatClient
 from detect import get_programming_language
 from github_api import fetch_git_diffs
 from llm_client import LLMType, get_default_llm_model_name, string_to_enum
@@ -36,6 +36,11 @@ def display_code_with_highlightjs(code, language):
     components.html(html_content, height=800, scrolling=True)
 
 
+async def process_chunk(content, output, key):
+    st.session_state[key] += content
+    output.write(st.session_state[key])
+
+
 async def main():
     st.markdown("""
         <style>
@@ -62,11 +67,7 @@ async def main():
     client_type = string_to_enum(LLMType, os.getenv('DEFAULT_LLM_CLIENT', "openai"))
     model_name = os.getenv('DEFAULT_LLM_MODEL', get_default_llm_model_name(client_type))
 
-
-    async def process_chunk(content, output, key):
-        st.session_state[key] += content
-        output.write(st.session_state[key])
-
+    chat_client = ChatClient(client_type, model_name, stream_checked)
 
     if button_clicked:
         fetchingholder = st.empty().text('Fetching...')
@@ -107,10 +108,13 @@ async def main():
                         st.session_state[stream_key] = ''
                     if key not in st.session_state:
                         st.session_state[key] = "Loading AI comments..."
-                        patch = diffs.contents[idx] if whole_file_checked else diffs.patches[idx]
+                        if per_file_checked:
+                            patch = diffs.contents[idx] if whole_file_checked else diffs.patches[idx]
+                        else:
+                            patch = " ".join(diffs.contents) if whole_file_checked else " ".join(diffs.patches)
                         placeholder = st.empty().text('Processing...') if not stream_checked else None
-                        await ask_diff(patch, client_type, model_name, sys_out, prompt_input, prompt_template_selected,
-                                process_chunk, False, stream_checked, key=stream_key)
+                        await chat_client.ask_diff(prompt_input, prompt_template_selected, 
+                            patch, process_chunk, sys_out, key=stream_key)
                         if placeholder:
                             placeholder.empty()
                 with tab2:

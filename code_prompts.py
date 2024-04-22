@@ -55,7 +55,7 @@ You are an AI assistant that provides concise code reviews based on the provided
 When generating the code review, follow these guidelines:
 
 1. Begin with a short introductory sentence that acknowledges the overall purpose or theme of the code changes.
-2. Provide feedback on the code changes in 3-4 bullet points, focusing on the most important aspects, such as:
+2. Provide feedback on the code changes in 3-8 bullet points, focusing on the most important aspects, such as:
    - Code readability, maintainability, and adherence to best practices
    - Potential bugs, vulnerabilities, or edge cases that should be addressed
    - Suggestions for simplifying complex logic or improving code efficiency
@@ -63,7 +63,7 @@ When generating the code review, follow these guidelines:
    - Adherence to coding standards and conventions
 3. If there are any positive aspects or notable improvements in the code, acknowledge them in a separate bullet point.
 4. Use a constructive and respectful tone, offering specific and actionable feedback.
-5. Keep the code review concise, aiming for a total length of no more than 5-6 bullet points.
+5. Keep the code review concise, aiming for a total length of no more than 3-8 bullet points.
 6. Ensure that the review focuses on high-level feedback and suggestions rather than nitpicking minor details or personal preferences.
 
 Please generate the code review based on the provided git diff, following the above guidelines. The git diff will be provided in the next message, enclosed in triple backticks (```).
@@ -265,7 +265,7 @@ CODE_SMELLS_SETTINGS = {
 CODE_SUMMARY_SETTINGS = {
     'top_p': 0.9,
     'temperature': 0.7,
-    'max_tokens': 400,
+    'max_tokens': 500,
     'n': 1,
     'presence_penalty': 0.1,
     'frequency_penalty': 0.3,

@@ -10,45 +10,51 @@ from github_api import fetch_git_diffs
 from llm_client import LLMType, OllamaClient, OpenAIClient, get_default_llm_model_name, string_to_enum
 
 
-async def process_chunk(content, output, key=None):
+async def terminal_process_chunk(content, output, key=None):
     output.write(content)
     output.flush()
 
 
-async def ask_diff(patch, client_type, model_name, sys_out, prompt, prompt_template, callback_stream,
-                   command_line=False, stream=False, key=None):
-    message = f"```{patch}```"
-    code_prompt = None
-    if prompt_template and (prompt is None or prompt == ""):
-        code_prompt = CODE_PROMPTS.get(prompt_template)
-        if not code_prompt:
-            raise Exception(f"Error: Invalid prompt_template")
-    if (prompt is None or prompt == '') and (prompt_template is None or prompt_template == ''):
-        raise Exception('Error: No prompt or prompt_template')
+class ChatClient:
+    def __init__(self, client_type, model_name, stream=True, terminal=False):
+        self.client_type = client_type
+        self.model_name = model_name
+        self.client = None
+        self.stream = stream
+        self.terminal = terminal
+        if client_type is LLMType.OPENAI:
+            self.client = OpenAIClient(model_name, stream=stream)
+        elif client_type is LLMType.OLLAMA:
+            self.client = OllamaClient(model_name, stream=stream)
+        else:
+            raise Exception('not a valid client_type')
 
-    if client_type is LLMType.OPENAI:
-        llm_client = OpenAIClient(model_name, stream=stream)
-    elif client_type is LLMType.OLLAMA:
-        llm_client = OllamaClient(model_name, stream=stream)
-    else:
-        raise Exception('not a valid client_type')
+    async def ask_diff(self, prompt, prompt_template, patch, callback_stream, sys_out=None, key=None):
+        message = f"```{patch}```"
+        code_prompt = None
+        if prompt_template and (prompt is None or prompt == ""):
+            code_prompt = CODE_PROMPTS.get(prompt_template)
+            if not code_prompt:
+                raise Exception(f"Error: Invalid prompt_template")
+        if (prompt is None or prompt == '') and (prompt_template is None or prompt_template == ''):
+            raise Exception('Error: No prompt or prompt_template')
 
-    prompt_options = DEFAULT_PROMPT_OPTIONS
-    if prompt:
-        system_prompt = f"{prompt}\n{SYSTEM_PROMPT_ENDING}"
-    else:
-        prompt_options = code_prompt.get('options') or DEFAULT_PROMPT_OPTIONS
-        system_prompt = code_prompt.get('system_prompt')
+        prompt_options = DEFAULT_PROMPT_OPTIONS
+        if prompt:
+            system_prompt = f"{prompt}\n{SYSTEM_PROMPT_ENDING}"
+        else:
+            prompt_options = code_prompt.get('options') or DEFAULT_PROMPT_OPTIONS
+            system_prompt = code_prompt.get('system_prompt')
 
-    if command_line:
-        await callback_stream(message, sys_out, key=key)
+        if self.terminal:
+            await callback_stream(message, sys_out, key=key)
 
-    if stream:
-        await llm_client.async_chat(system_prompt, message, prompt_options, callback_stream, sys_out, key=key)
-    else:
-        resp = llm_client.chat(system_prompt, message, prompt_options)
-        await callback_stream(resp, sys_out, key=key)
-
+        if self.stream:
+            await self.client.async_chat(system_prompt, message, prompt_options, callback_stream, sys_out, key=key)
+        else:
+            resp = self.client.chat(system_prompt, message, prompt_options)
+            await callback_stream(resp, sys_out, key=key)
+    
 
 async def cli():
     load_dotenv()
@@ -94,18 +100,16 @@ async def cli():
     
     sys_out = sys.stdout
     git_diff = fetch_git_diffs(github_url, base_branch)
-    command_line = True
+    chat_client = ChatClient(client_type, model_name, stream, terminal=True)
 
     if per_file:
         for idx, _  in enumerate(git_diff.patches):
             patch = git_diff.contents[idx] if whole_file else git_diff.patches[idx]
-            await ask_diff(patch, client_type, model_name, sys_out, prompt, prompt_template,
-                   process_chunk, command_line, stream)
+            await chat_client.ask_diff(prompt, prompt_template, patch, terminal_process_chunk, sys_out)
     else:
         patches = git_diff.contents if whole_file else git_diff.patches
         patch = "\n".join(patches)
-        await ask_diff(patch, client_type, model_name, sys_out, prompt, prompt_template,
-                   process_chunk, command_line, stream)
+        await chat_client.ask_diff(prompt, prompt_template, patch, terminal_process_chunk, sys_out)
 
 
 if __name__ == "__main__": 
