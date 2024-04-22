@@ -10,8 +10,13 @@ from github_api import fetch_git_diffs
 from llm_client import LLMType, OllamaClient, OpenAIClient, get_default_llm_model_name, string_to_enum
 
 
-async def ask_diff(patch, client_type, model_name, sys_out, prompt, prompt_template,
-                   command_line=False, stream=False):
+async def process_chunk(content, output, key=None):
+    output.write(content)
+    output.flush()
+
+
+async def ask_diff(patch, client_type, model_name, sys_out, prompt, prompt_template, callback_stream,
+                   command_line=False, stream=False, key=None):
     message = f"```{patch}```"
     code_prompt = None
     if prompt_template and (prompt is None or prompt == ""):
@@ -36,18 +41,13 @@ async def ask_diff(patch, client_type, model_name, sys_out, prompt, prompt_templ
         system_prompt = code_prompt.get('system_prompt')
 
     if command_line:
-        sys_out.write(message)
-        sys_out.write("\n")
-        sys_out.flush()
+        await callback_stream(message, sys_out, key=key)
 
     if stream:
-        await llm_client.async_chat(system_prompt, message, prompt_options, sys_out, command_line)
+        await llm_client.async_chat(system_prompt, message, prompt_options, callback_stream, sys_out, key=key)
     else:
-        resp = llm_client.chat(system_prompt, message, prompt_options, sys_out)
-        if command_line:
-            sys_out.write(resp)
-            sys_out.write("\n")
-            sys_out.flush()
+        resp = llm_client.chat(system_prompt, message, prompt_options)
+        await callback_stream(resp, sys_out, key=key)
 
 
 async def cli():
@@ -98,15 +98,14 @@ async def cli():
 
     if per_file:
         for idx, _  in enumerate(git_diff.patches):
-            patch = git_diff.diff_headers[idx]
-            patch += git_diff.contents[idx] if whole_file else git_diff.patches[idx]
+            patch = git_diff.contents[idx] if whole_file else git_diff.patches[idx]
             await ask_diff(patch, client_type, model_name, sys_out, prompt, prompt_template,
-                   command_line, stream)
+                   process_chunk, command_line, stream)
     else:
         patches = git_diff.contents if whole_file else git_diff.patches
         patch = "\n".join(patches)
         await ask_diff(patch, client_type, model_name, sys_out, prompt, prompt_template,
-                   command_line, stream)
+                   process_chunk, command_line, stream)
 
 
 if __name__ == "__main__": 

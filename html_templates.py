@@ -51,11 +51,10 @@ f"""
         var diffString = `{diff}`;
         var targetElement = document.getElementById('diff-container');
         var html = Diff2Html.html(diffString, {{
-            drawFileList: true,
+            drawFileList: false,
             matching: 'lines',
             outputFormat: 'line-by-line',
-            synchronisedScroll: true,
-            drawFileList: false
+            synchronisedScroll: true
         }});
         targetElement.innerHTML = html;
 

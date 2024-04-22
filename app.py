@@ -62,6 +62,12 @@ async def main():
     client_type = string_to_enum(LLMType, os.getenv('DEFAULT_LLM_CLIENT', "openai"))
     model_name = os.getenv('DEFAULT_LLM_MODEL', get_default_llm_model_name(client_type))
 
+
+    async def process_chunk(content, output, key):
+        st.session_state[key] += content
+        output.write(st.session_state[key])
+
+
     if button_clicked:
         fetchingholder = st.empty().text('Fetching...')
         diffs = fetch_git_diffs(url_input)
@@ -80,7 +86,12 @@ async def main():
                     with tab1:
                         display_diff_with_diff2html(code)
                     with tab2:
-                        display_code_with_highlightjs(diffs.contents[idx], prog_language)
+                        if per_file_checked:
+                            display_code_with_highlightjs(diffs.contents[idx], prog_language)
+                        else:
+                            for i, content in enumerate(diffs.contents):
+                                tab2.write(f"**{diffs.file_names[i]}**")
+                                display_code_with_highlightjs(content, prog_language)
                 else:
                     tab1 = st.tabs(["📄 Code"])
                     display_code_with_highlightjs(code, prog_language)
@@ -89,14 +100,17 @@ async def main():
                 st.write(f"**{file_name}**")
                 tab1, tab2 = st.tabs(["📝 Response", "💬 Chat"])
                 with tab1:
-                    sys_out = col2.empty()
+                    sys_out = tab1.empty()
                     key = f"ai_comment_{idx}"
+                    stream_key = f"stream_{idx}"
+                    if stream_key not in st.session_state:
+                        st.session_state[stream_key] = ''
                     if key not in st.session_state:
                         st.session_state[key] = "Loading AI comments..."
                         patch = diffs.contents[idx] if whole_file_checked else diffs.patches[idx]
                         placeholder = st.empty().text('Processing...') if not stream_checked else None
                         await ask_diff(patch, client_type, model_name, sys_out, prompt_input, prompt_template_selected,
-                                False, stream_checked)
+                                process_chunk, False, stream_checked, key=stream_key)
                         if placeholder:
                             placeholder.empty()
                 with tab2:
