@@ -267,7 +267,6 @@ CODE_SUMMARY_SETTINGS = {
     'temperature': 0.7,
     'max_tokens': 400,
     'n': 1,
-    # 'stop': ['```'],
     'presence_penalty': 0.1,
     'frequency_penalty': 0.3,
 }

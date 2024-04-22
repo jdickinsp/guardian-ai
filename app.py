@@ -8,6 +8,7 @@ from ask_diff import ask_diff
 from detect import get_programming_language
 from github_api import fetch_git_diffs
 from llm_client import LLMType, get_default_llm_model_name, string_to_enum
+from html_templates import CODE_HIGHLIGHT_HTML_CONTENT, DIFF_VIEWER_HTML_CONTENT
 
 
 load_dotenv()
@@ -26,76 +27,12 @@ st.session_state = init_session_state()
 
 def display_diff_with_diff2html(diff):
     escaped_diff = diff.replace("`", "\\`").replace("${", "${'$'}{")
-    html_content = f"""
-    <html>
-    <head>
-        <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/diff2html/bundles/css/diff2html.min.css">
-        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.4.0/styles/github.min.css">
-    </head>
-    <body>
-        <div id="diff-container"></div>
-        <script src="https://cdn.jsdelivr.net/npm/diff2html/bundles/js/diff2html.min.js"></script>
-        <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.4.0/highlight.min.js"></script>
-        <script>
-        document.addEventListener('DOMContentLoaded', function() {{
-            var diffString = `{escaped_diff}`;
-            var targetElement = document.getElementById('diff-container');
-            var html = Diff2Html.html(diffString, {{
-                drawFileList: true,
-                matching: 'lines',
-                outputFormat: 'line-by-line',
-                synchronisedScroll: true,
-                drawFileList: false
-            }});
-            targetElement.innerHTML = html;
-
-            // Manually trigger highlight.js on the diff output
-            document.querySelectorAll('pre code').forEach((block) => {{
-                hljs.highlightBlock(block);
-            }});
-        }});
-        </script>
-    </body>
-    </html>
-    """
+    html_content = DIFF_VIEWER_HTML_CONTENT(escaped_diff)
     components.html(html_content, height=800, scrolling=True)
 
 
-def display_code_with_highlightjs(code, language="python"):
-    html_content = f"""
-    <html>
-    <head>
-        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.4.0/styles/github.min.css">
-        <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.4.0/highlight.min.js"></script>
-        <script src="https://cdn.jsdelivr.net/npm/highlightjs-line-numbers.js/dist/highlightjs-line-numbers.min.js"></script>
-        <style>
-            .hljs-ln-numbers {{
-                -webkit-touch-callout: none;
-                -webkit-user-select: none;
-                -khtml-user-select: none;
-                -moz-user-select: none;
-                -ms-user-select: none;
-                user-select: none;
-
-                text-align: left;
-                color: #ccc;
-                vertical-align: top;
-                padding-right: 5px;
-                color: #bbb;
-            }}
-        </style>
-    </head>
-    <body>
-        <pre><code class="{language}">{code}</code></pre>
-        <script>
-            document.addEventListener('DOMContentLoaded', function() {{
-                hljs.highlightAll();
-                hljs.initLineNumbersOnLoad();
-            }});
-        </script>
-    </body>
-    </html>
-    """
+def display_code_with_highlightjs(code, language):
+    html_content = CODE_HIGHLIGHT_HTML_CONTENT(language, code)
     components.html(html_content, height=800, scrolling=True)
 
 
