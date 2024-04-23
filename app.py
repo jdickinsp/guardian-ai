@@ -16,13 +16,13 @@ load_dotenv()
 st.set_page_config(layout="wide")
 
 
-# # Define a function to initialize session state
-# @st.cache_data(persist="disk")
-# def init_session_state():
-#     return {"url_input": ""}
+# Define a function to initialize session state
+@st.cache_data(persist="disk")
+def init_session_state():
+    return {"url_input": ""}
 
-# # Initialize session state
-# st.session_state = init_session_state()
+# Initialize session state
+st.session_state = init_session_state()
 
 
 def display_diff_with_diff2html(diff):
@@ -37,10 +37,15 @@ def display_code_with_highlightjs(code, language):
 
 
 async def process_stream(stream, output, client_type, key):
+    # Ensure the key exists in session_state
+    if key not in st.session_state:
+        st.session_state[key] = ""
+
     async for chunk in stream:
-        if client_type is LLMType.OPENAI:
+        content = ""
+        if client_type == LLMType.OPENAI:
             content = chunk.choices[0].delta.content
-        elif client_type is LLMType.OLLAMA:
+        elif client_type == LLMType.OLLAMA:
             content = chunk['message']['content']
         else:
             raise Exception('unkown client_type')
@@ -56,10 +61,9 @@ async def main():
         </style>
     """, unsafe_allow_html=True)
 
-    # url_input = st.text_input("Github Url:", st.session_state["url_input"])
-    url_input = st.text_input("Github Url:")
+    url_input = st.text_input("Github Url:", st.session_state["url_input"])
     # Save the value to session state
-    st.session_state.user_input = url_input
+    st.session_state['user_input'] = url_input
 
     prompt_template_options = ["code-review", "code-summary", "code-debate", 
                                "code-smells", "code-refactor", 'explain-lines',
@@ -135,15 +139,13 @@ async def main():
                 sys_out = tab1.empty()
                 with tab1:
                     stream_key = f"stream_{idx}"
-                    if stream_key not in st.session_state:
-                        st.session_state[stream_key] = ''
                     if per_file_checked:
-                        patch = diffs.contents[idx] if whole_file_checked else diffs.patches[idx]
+                        fpatch = diffs.contents[idx] if whole_file_checked else diffs.patches[idx]
                     else:
-                        patch = " ".join(diffs.contents) if whole_file_checked else " ".join(diffs.patches)
+                        fpatch = " ".join(diffs.contents) if whole_file_checked else " ".join(diffs.patches)
                     placeholder = st.empty().text('Processing...') if not stream_checked else None
 
-                    prompts = chat.prepare_prompts(prompt_input, prompt_template_selected, patch)
+                    prompts = chat.prepare_prompts(prompt_input, prompt_template_selected, fpatch)
                     if stream_checked:
                         stream = await chat.async_chat_response(prompts)
                         await process_stream(stream, sys_out, client_type, stream_key)
