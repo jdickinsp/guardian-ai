@@ -34,24 +34,28 @@ def get_default_llm_model_name(client_type):
 
 class LLMClient(ABC):
     @abc.abstractmethod
-    async def async_chat(self, system_prompt, user_message, prompt_options, process_chunk, sys_out=sys.stdout):
+    async def async_chat(self, system_prompt, user_message, prompt_options):
         raise NotImplementedError
 
     @abc.abstractmethod
-    def chat(self, system_prompt, user_message, prompt_options):
+    def chat_response(self, system_prompt, user_message, prompt_options):
+        raise NotImplementedError
+
+    @abc.abstractmethod
+    def stream_chat(self, system_prompt, user_message, prompt_options):
         raise NotImplementedError
 
 
 class OpenAIClient(LLMClient):
-    def __init__(self, model_name, stream=True):
+    def __init__(self, model_name):
         api_key = os.getenv('OPENAI_API_KEY')
-        self.client = AsyncOpenAI(api_key=api_key) if stream else OpenAI(api_key=api_key)
+        self.async_client = AsyncOpenAI(api_key=api_key)
+        self.client = OpenAI(api_key=api_key)
         self.model_name = model_name
-        self.stream = stream
 
-    async def async_chat(self, system_prompt, user_message, prompt_options, process_chunk, sys_out=sys.stdout, key=None):
+    async def async_chat(self, system_prompt, user_message, prompt_options):
         try:
-            stream = await self.client.chat.completions.create(
+            stream = await self.async_client.chat.completions.create(
                 model=self.model_name,
                 messages=[
                     { 'role': 'system', 'content': system_prompt },
@@ -60,15 +64,12 @@ class OpenAIClient(LLMClient):
                 **prompt_options,
                 stream=True,
             )
-            async for chunk in stream:
-                chunk_content = chunk.choices[0].delta.content
-                if chunk_content:
-                    await process_chunk(chunk_content, sys_out, key)
+            return stream
         except Exception as e:
             print(f"An error occurred: {e}", file=sys.stderr)
             raise
 
-    def chat(self, system_prompt, user_message, prompt_options):
+    def chat_response(self, system_prompt, user_message, prompt_options):
         resp = self.client.chat.completions.create(
             model=self.model_name,
             messages=[
@@ -80,17 +81,28 @@ class OpenAIClient(LLMClient):
         message = resp.choices[0].message.content.strip()
         return message
 
+    def stream_chat(self, system_prompt, user_message, prompt_options):
+        return self.client.chat.completions.create(
+            model=self.model_name,
+            messages=[
+                { 'role': 'system', 'content': system_prompt },
+                { 'role': 'user', 'content': user_message }
+            ],
+            **prompt_options,
+            stream=True,
+        )
+
 
 class OllamaClient(LLMClient):
-    def __init__(self, model_name, stream=True):
-        self.client = ollama.AsyncClient() if stream else ollama.Client()
+    def __init__(self, model_name):
+        self.async_client = ollama.AsyncClient()
+        self.client = ollama.Client()
         self.model_name = model_name
-        self.stream = stream
 
-    async def async_chat(self, system_prompt, user_message, prompt_options, process_chunk, sys_out=sys.stdout, key=None):
+    async def async_chat(self, system_prompt, user_message, prompt_options):
         try:
             content = LLAMA_3_TEMPLATE(system=system_prompt, message=user_message)
-            stream = await self.client.chat(
+            stream = await self.async_client.chat(
                 model=self.model_name,
                 messages=[{ 'role': 'user', 'content': content }],
                 options={
@@ -100,15 +112,12 @@ class OllamaClient(LLMClient):
                 },
                 stream=True,
             )
-            async for chunk in stream:
-                chunk_content = chunk['message']['content']
-                if chunk_content:
-                    await process_chunk(chunk_content, sys_out, key)
+            return stream
         except Exception as e:
             print(f"An error occurred: {e}", file=sys.stderr)
             raise
 
-    def chat(self, system_prompt, user_message, prompt_options):
+    def chat_response(self, system_prompt, user_message, prompt_options):
         content = LLAMA_3_TEMPLATE(system=system_prompt, message=user_message)
         resp = self.client.chat(
             model=self.model_name,
@@ -121,3 +130,16 @@ class OllamaClient(LLMClient):
         )
         message = resp['message']['content']
         return message.strip()
+    
+    def stream_chat(self, system_prompt, user_message, prompt_options):
+        content = LLAMA_3_TEMPLATE(system=system_prompt, message=user_message)
+        return self.client.chat(
+            model=self.model_name,
+            messages=[ { 'role': 'user', 'content': content } ],
+            options={
+                'temperature': prompt_options['temperature'],
+                'top_p': prompt_options['top_p'],
+                'num_ctx': 8192,
+            },
+            stream=True
+        )

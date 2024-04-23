@@ -31,7 +31,7 @@ To use the Guardian AI, follow these steps:
 
 Example usage:
 ```
-python ask_diff.py --url=https://github.com/karpathy/llm.c/commit/8cf66fbb845665dabacba992e8a92631132a58d8 --prompt_template=code-review --per_file --client=ollama --model=llama3
+python cli.py --url=https://github.com/karpathy/llm.c/commit/8cf66fbb845665dabacba992e8a92631132a58d8 --prompt_template=code-review --per_file --client=ollama --model=llama3
 ```
 
 Run the webapp:
