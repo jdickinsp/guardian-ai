@@ -16,13 +16,13 @@ load_dotenv()
 st.set_page_config(layout="wide")
 
 
-# Define a function to initialize session state
-@st.cache_data(persist="disk")
-def init_session_state():
-    return {"url_input": ""}
+# # Define a function to initialize session state
+# @st.cache_data(persist="disk")
+# def init_session_state():
+#     return {"url_input": ""}
 
-# Initialize session state
-st.session_state = init_session_state()
+# # Initialize session state
+# st.session_state = init_session_state()
 
 
 def display_diff_with_diff2html(diff):
@@ -61,9 +61,9 @@ async def main():
         </style>
     """, unsafe_allow_html=True)
 
-    url_input = st.text_input("Github Url:", st.session_state["url_input"])
+    url_input = st.text_input("Github Url:")
     # Save the value to session state
-    st.session_state['user_input'] = url_input
+    st.session_state.user_input = url_input
 
     prompt_template_options = ["code-review", "code-summary", "code-debate", 
                                "code-smells", "code-refactor", 'explain-lines',
@@ -81,29 +81,31 @@ async def main():
     model_name = os.getenv('DEFAULT_LLM_MODEL', get_default_llm_model_name(client_type))
     chat = ChatClient(client_type, model_name)
 
-    # # Initialize chat history
-    # if "messages" not in st.session_state:
-    #     st.session_state.messages = []
+    # Initialize chat history
+    if "messages" not in st.session_state:
+        st.session_state.messages = []
 
-    # # Display chat messages from history on app rerun
-    # for message in st.session_state['messages']:
-    #     with st.chat_message(message["role"]):
-    #         st.markdown(message["content"])
+    # Display chat messages from history on app rerun
+    for message in st.session_state.messages:
+        with st.chat_message(message["role"]):
+            st.markdown(message["content"])
 
-    # # Accept user input
-    # prompt = st.chat_input("What is up?")
-    # if prompt:
-    #     # Display user message in chat message container
-    #     with st.chat_message("user"):
-    #         st.markdown(prompt)
-    #     # Add user message to chat history
-    #     st.session_state.messages.append({"role": "user", "content": prompt})
+    # Accept user input
+    prompt = st.chat_input("What is up?")
+    if prompt:
+        # Display user message in chat message container
+        with st.chat_message("user"):
+            st.markdown(prompt)
+        # Add user message to chat history
+        st.session_state.messages.append({"role": "user", "content": prompt})
     
-    #     # Display assistant response in chat message container
-    #     with st.chat_message("assistant"):
-    #         stream = chat.client.stream_chat("You are a useful assistant.", "tell a joke", {})
-    #         response = st.write_stream(stream)
-    #     st.session_state.messages.append({ "content": response, "role": "assistant" })
+        # Display assistant response in chat message container
+        with st.chat_message("assistant"):
+            diffs = fetch_git_diffs(url_input)
+            prompts = chat.prepare_prompts(prompt, None, "\n".join(diffs.patches))
+            stream = chat.client.stream_chat(prompts.system_prompt, prompts.user_message, prompts.options)
+            response = st.write_stream(stream)
+        st.session_state.messages.append({ "content": response, "role": "assistant" })
 
     if button_clicked:
         fetchingholder = st.empty().text('Fetching...')
