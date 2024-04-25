@@ -1,11 +1,13 @@
 import asyncio
 import os
+import threading
+import time
 from dotenv import load_dotenv
 import streamlit as st
 import streamlit.components.v1 as components
 
 from chat_client import ChatClient
-from detect import get_programming_language
+from detect import get_code_height, get_programming_language
 from github_api import fetch_git_diffs
 from llm_client import LLMType, get_default_llm_model_name, string_to_enum
 from html_templates import CODE_HIGHLIGHT_HTML_CONTENT, DIFF_VIEWER_HTML_CONTENT
@@ -16,19 +18,20 @@ load_dotenv()
 st.set_page_config(layout="wide")
 
 
-# # Define a function to initialize session state
-# @st.cache_data(persist="disk")
-# def init_session_state():
-#     return {"url_input": ""}
+# Define a function to initialize session state
+@st.cache_data(persist="disk")
+def init_session_state():
+    return {"url_input": ""}
 
-# # Initialize session state
-# st.session_state = init_session_state()
+# Initialize session state
+st.session_state = init_session_state()
 
 
 def display_diff_with_diff2html(diff):
+    height = min(get_code_height(diff), 1000)
     escaped_diff = diff.replace("`", "\\`").replace("${", "${'$'}{")
     html_content = DIFF_VIEWER_HTML_CONTENT(escaped_diff)
-    components.html(html_content, height=800, scrolling=True)
+    components.html(html_content, height=height, scrolling=True)
 
 
 def display_code_with_highlightjs(code, language):
@@ -36,11 +39,7 @@ def display_code_with_highlightjs(code, language):
     components.html(html_content, height=800, scrolling=True)
 
 
-async def process_stream(stream, output, client_type, key):
-    # Ensure the key exists in session_state
-    if key not in st.session_state:
-        st.session_state[key] = ""
-
+async def process_stream(stream, client_type, output, key):
     async for chunk in stream:
         content = ""
         if client_type == LLMType.OPENAI:
@@ -61,9 +60,9 @@ async def main():
         </style>
     """, unsafe_allow_html=True)
 
-    url_input = st.text_input("Github Url:")
+    url_input = st.text_input("Github Url:", st.session_state["url_input"])
     # Save the value to session state
-    st.session_state.user_input = url_input
+    st.session_state["user_input"] = url_input
 
     prompt_template_options = ["code-review", "code-summary", "code-debate", 
                                "code-smells", "code-refactor", 'explain-lines',
@@ -72,7 +71,7 @@ async def main():
     prompt_input = st.text_area("Prompt: (Optional)", None)
 
     stream_checked = st.checkbox("Stream", True)
-    per_file_checked = st.checkbox("Per File", False)
+    per_file_checked = st.checkbox("Per File", True)
     whole_file_checked = st.checkbox("Whole File", False)
 
     button_clicked = st.button("Get Response")
@@ -80,32 +79,6 @@ async def main():
     client_type = string_to_enum(LLMType, os.getenv('DEFAULT_LLM_CLIENT', "openai"))
     model_name = os.getenv('DEFAULT_LLM_MODEL', get_default_llm_model_name(client_type))
     chat = ChatClient(client_type, model_name)
-
-    # Initialize chat history
-    if "messages" not in st.session_state:
-        st.session_state.messages = []
-
-    # Display chat messages from history on app rerun
-    for message in st.session_state.messages:
-        with st.chat_message(message["role"]):
-            st.markdown(message["content"])
-
-    # Accept user input
-    prompt = st.chat_input("What is up?")
-    if prompt:
-        # Display user message in chat message container
-        with st.chat_message("user"):
-            st.markdown(prompt)
-        # Add user message to chat history
-        st.session_state.messages.append({"role": "user", "content": prompt})
-    
-        # Display assistant response in chat message container
-        with st.chat_message("assistant"):
-            diffs = fetch_git_diffs(url_input)
-            prompts = chat.prepare_prompts(prompt, None, "\n".join(diffs.patches))
-            stream = chat.client.stream_chat(prompts.system_prompt, prompts.user_message, prompts.options)
-            response = st.write_stream(stream)
-        st.session_state.messages.append({ "content": response, "role": "assistant" })
 
     if button_clicked:
         fetchingholder = st.empty().text('Fetching...')
@@ -137,28 +110,23 @@ async def main():
 
             with col2:
                 st.write(f"**{file_name}**")
-                tab1, tab2 = st.tabs(["📝 Response", "💬 Chat"])
-                sys_out = tab1.empty()
-                with tab1:
-                    stream_key = f"stream_{idx}"
-                    if per_file_checked:
-                        fpatch = diffs.contents[idx] if whole_file_checked else diffs.patches[idx]
-                    else:
-                        fpatch = " ".join(diffs.contents) if whole_file_checked else " ".join(diffs.patches)
-                    placeholder = st.empty().text('Processing...') if not stream_checked else None
-
-                    prompts = chat.prepare_prompts(prompt_input, prompt_template_selected, fpatch)
-                    if stream_checked:
-                        stream = await chat.async_chat_response(prompts)
-                        await process_stream(stream, sys_out, client_type, stream_key)
-                    else:
-                        resp = chat.chat_response(prompts)
-                        sys_out.write(f"{resp}\n")
-                    if placeholder:
-                        placeholder.empty()
-                       
-                with tab2:
-                    pass
+                sys_out = col2.empty()
+                key = f"ai_comment_{idx}"
+                if key not in st.session_state:
+                    st.session_state[key] = ""
+                if per_file_checked:
+                    fpatch = diffs.contents[idx] if whole_file_checked else diffs.patches[idx]
+                else:
+                    fpatch = " ".join(diffs.contents) if whole_file_checked else " ".join(diffs.patches)
+                prompts = chat.prepare_prompts(prompt_input, prompt_template_selected, fpatch)
+                if stream_checked:
+                    stream = await chat.async_chat_response(prompts)
+                    await process_stream(stream, client_type, sys_out, key)
+                else:
+                    placeholder = tab1.empty().text('Processing...')
+                    content = chat.chat_response(prompts)
+                    st.session_state[key] = content
+                    placeholder.empty()
 
 
 if __name__ == "__main__":

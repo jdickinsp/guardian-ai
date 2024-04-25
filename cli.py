@@ -52,7 +52,7 @@ async def cli():
 
     if model_name is None:
         model_name = get_default_llm_model_name(client_type)
-    
+
     if prompt is None and prompt_template is None:
         prompt_template = 'code-review'
 
