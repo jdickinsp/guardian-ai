@@ -15,6 +15,7 @@ class GitHubURLType(Enum):
     PULL_REQUEST = "Pull Request"
     BRANCH = "Branch"
     COMMIT = "Commit"
+    PULL_REQUEST_COMMIT = "Pull Request Commit"
     UNKNOWN = "Unknown"
 
 
@@ -32,7 +33,10 @@ def identify_github_url_type(url):
     pr_pattern = r"https://github\.com/[^/]+/[^/]+/pull/\d+(/[^/]+)?"
     branch_pattern = r"https://github\.com/[^/]+/[^/]+/tree/[^/]+"
     commit_pattern = r"https://github\.com/[^/]+/[^/]+/commit/[0-9a-f]{40}"
+    pr_commit_pattern = r"https://github\.com/[^/]+/[^/]+/pull/\d+/commits/[0-9a-f]{40}"
 
+    if re.match(pr_commit_pattern, url):
+        return GitHubURLType.PULL_REQUEST_COMMIT
     if re.match(pr_pattern, url):
         return GitHubURLType.PULL_REQUEST
     elif re.match(branch_pattern, url):
@@ -162,6 +166,25 @@ def extract_repo_and_commit_hash(url):
         return None
 
 
+def get_commit_hash_from_url(url):
+    # Regex to match the GitHub pull request commit URL and extract the repository and commit hash
+    pattern = r"https://github.com/([^/]+)/([^/]+)/pull/(\d+)/commits/([a-f0-9]+)"
+    match = re.search(pattern, url)
+    if match:
+        owner = match.group(1)
+        repo_name = match.group(2)
+        pr_number = match.group(3)
+        commit_hash = match.group(4)
+        return {
+            "repo_name": f"{owner}/{repo_name}",
+            "pr_number": pr_number,
+            "commit_hash": commit_hash
+        }
+    else:
+        print("Warning: The URL format is not correct.")
+        return None
+
+
 def get_github_commit_diff(repo_name, commit_hash):
     g = Github(auth=Auth.Token(os.getenv("GITHUB_ACCESS_TOKEN")))
     repo = g.get_repo(repo_name)
@@ -198,6 +221,9 @@ def fetch_git_diffs(github_url, base_branch=None):
         diffs = get_github_branch_diff(info['repo_name'], info['branch'], base_branch)
     elif github_url_type is GitHubURLType.COMMIT:
         info = extract_repo_and_commit_hash(github_url)
+        diffs = get_github_commit_diff(info['repo_name'], info['commit_hash'])
+    elif github_url_type is GitHubURLType.PULL_REQUEST_COMMIT:
+        info = get_commit_hash_from_url(github_url)
         diffs = get_github_commit_diff(info['repo_name'], info['commit_hash'])
     else:
         raise Exception(f"Error: Invalid github url")

@@ -27,8 +27,10 @@ def init_session_state():
 st.session_state = init_session_state()
 
 
-def display_diff_with_diff2html(diff):
-    height = min(get_code_height(diff), 1000)
+def display_diff_with_diff2html(diff, per_file=True):
+    height = get_code_height(diff)
+    if per_file is True:
+        height = min(height, 1000)
     escaped_diff = diff.replace("`", "\\`").replace("${", "${'$'}{")
     html_content = DIFF_VIEWER_HTML_CONTENT(escaped_diff)
     components.html(html_content, height=height, scrolling=True)
@@ -96,7 +98,7 @@ async def main():
                 if code[:4] == 'diff':
                     tab1, tab2 = st.tabs(["✨ Diff", "📄 Code"])
                     with tab1:
-                        display_diff_with_diff2html(code)
+                        display_diff_with_diff2html(code, per_file_checked)
                     with tab2:
                         if per_file_checked:
                             display_code_with_highlightjs(diffs.contents[idx], prog_language)

@@ -4,7 +4,7 @@ def get_line_count(code):
 
 def get_code_height(code):
     line_count = get_line_count(code)
-    return line_count * 20
+    return line_count * 18
 
 
 def get_programming_language(extension):
