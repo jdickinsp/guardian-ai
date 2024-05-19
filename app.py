@@ -1,7 +1,5 @@
 import asyncio
 import os
-import threading
-import time
 from dotenv import load_dotenv
 import streamlit as st
 import streamlit.components.v1 as components
@@ -36,9 +34,12 @@ def display_diff_with_diff2html(diff, per_file=True):
     components.html(html_content, height=height, scrolling=True)
 
 
-def display_code_with_highlightjs(code, language):
+def display_code_with_highlightjs(code, language, per_file=True):
+    height = get_code_height(code)
+    if per_file is True:
+        height = min(height, 1000)
     html_content = CODE_HIGHLIGHT_HTML_CONTENT(language, code)
-    components.html(html_content, height=800, scrolling=True)
+    components.html(html_content, height=height, scrolling=True)
 
 
 async def process_stream(stream, client_type, output, key):
@@ -75,6 +76,7 @@ async def main():
     stream_checked = st.checkbox("Stream", True)
     per_file_checked = st.checkbox("Per File", True)
     whole_file_checked = st.checkbox("Whole File", False)
+    ignore_tests_checked = st.checkbox("Ignore Tests", True)
 
     button_clicked = st.button("Get Response")
 
@@ -84,7 +86,7 @@ async def main():
 
     if button_clicked:
         fetchingholder = st.empty().text('Fetching...')
-        diffs = fetch_git_diffs(url_input)
+        diffs = fetch_git_diffs(url_input, ignore_tests=ignore_tests_checked)
         fetchingholder.empty()
         patches = diffs.patches if per_file_checked else ["\n".join(diffs.patches)]
         joined_filenames = " ".join(diffs.file_names)
@@ -101,14 +103,14 @@ async def main():
                         display_diff_with_diff2html(code, per_file_checked)
                     with tab2:
                         if per_file_checked:
-                            display_code_with_highlightjs(diffs.contents[idx], prog_language)
+                            display_code_with_highlightjs(diffs.contents[idx], prog_language, per_file_checked)
                         else:
                             for i, content in enumerate(diffs.contents):
                                 tab2.write(f"**{diffs.file_names[i]}**")
-                                display_code_with_highlightjs(content, prog_language)
+                                display_code_with_highlightjs(content, prog_language, per_file_checked)
                 else:
                     tab1 = st.tabs(["📄 Code"])
-                    display_code_with_highlightjs(code, prog_language)
+                    display_code_with_highlightjs(code, prog_language, per_file_checked)
 
             with col2:
                 st.write(f"**{file_name}**")

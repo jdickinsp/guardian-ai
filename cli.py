@@ -57,13 +57,13 @@ async def cli():
         prompt_template = 'code-review'
 
     sys_out = sys.stdout
-    sys_out.write(f"Client: {client_type.name.lower()}\n")
-    sys_out.write(f"Model: {model_name}\n")
-    sys_out.write(f"Url: {github_url}\n")
+    sys_out.write(f"""Client: {client_type.name.lower()}\n""")
+    sys_out.write(f"""Model: {model_name}\n""")
+    sys_out.write(f"""Url: {github_url}\n""")
     if prompt_template:
-        sys_out.write(f"Prompt-Template: {prompt_template}\n")
+        sys_out.write(f"""Prompt-Template: {prompt_template}\n""")
     else:
-        sys_out.write(f"Prompt: {prompt}\n")
+        sys_out.write(f"""Prompt: {prompt}\n""")
     
     git_diff = fetch_git_diffs(github_url, base_branch)
     chat = ChatClient(client_type, model_name)
@@ -75,18 +75,18 @@ async def cli():
             patches.append(patch)
     else:
         diffs = git_diff.contents if whole_file else git_diff.patches
-        patches.append("\n".join(diffs))
+        patches.append("""\n""".join(diffs))
 
     for patch in patches:
         if per_file:
-            sys_out.write(f"{patch}\n")
+            sys_out.write(f"""{patch}\n""")
         prompts = chat.prepare_prompts(prompt, prompt_template, patch)
         if stream_on:
             stream = await chat.async_chat_response(prompts)
             await process_stream(stream, sys_out, client_type)
         else:
             resp = chat.chat_response(prompts)
-            sys_out.write(f"{resp}\n")
+            sys_out.write(f"""{resp}\n""")
 
 
 if __name__ == "__main__": 
