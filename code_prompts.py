@@ -1,4 +1,5 @@
-SYSTEM_PROMPT_ENDING = "\nThe git diff will be provided in the next message, enclosed in triple backticks (```)."
+SYSTEM_PROMPT_CODE_ENDING = "\nThe code will be provided in the next message, enclosed in triple backticks (```)."
+SYSTEM_PROMPT_DIFF_ENDING = "\nThe git diff will be provided in the next message, enclosed in triple backticks (```)."
 
 
 CODE_DEBATE_PROMPT = """
@@ -217,7 +218,7 @@ You can provide the diff in the next message, enclosed in triple backticks (```)
 DEFAULT_PROMPT_OPTIONS = {
     'top_p': 0.9,
     'temperature': 0.8,
-    'max_tokens': 1000,
+    'max_tokens': 3000,
 }
 
 

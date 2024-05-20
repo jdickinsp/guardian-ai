@@ -67,3 +67,15 @@ f"""
 </body>
 </html>
 """
+
+
+MERMAID_HTML_CONTENT = lambda mermaid_code: \
+f"""
+<div class="mermaid">
+    {mermaid_code}
+</div>
+<script type="module">
+    import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@9/dist/mermaid.esm.min.mjs';
+    mermaid.initialize({{ startOnLoad: true }});
+</script>
+"""

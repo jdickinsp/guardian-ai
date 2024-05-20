@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from code_prompts import DEFAULT_PROMPT_OPTIONS, CODE_PROMPTS, SYSTEM_PROMPT_ENDING
+from code_prompts import DEFAULT_PROMPT_OPTIONS, CODE_PROMPTS, SYSTEM_PROMPT_DIFF_ENDING, SYSTEM_PROMPT_CODE_ENDING
 from github_api import fetch_git_diffs
 from llm_client import LLMType, OllamaClient, OpenAIClient
 
@@ -32,7 +32,10 @@ class ChatClient:
 
         options = DEFAULT_PROMPT_OPTIONS
         if prompt:
-            system_prompt = f"{prompt}\n{SYSTEM_PROMPT_ENDING}"
+            if patch[:4] == 'diff':
+                system_prompt = f"{prompt}\n{SYSTEM_PROMPT_DIFF_ENDING}"
+            else:
+                system_prompt = f"{prompt}\n{SYSTEM_PROMPT_CODE_ENDING}"
         else:
             options = code_prompt.get('options') or DEFAULT_PROMPT_OPTIONS
             system_prompt = code_prompt.get('system_prompt')
