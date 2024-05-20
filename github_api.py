@@ -46,12 +46,12 @@ def identify_github_url_type(url):
         return GitHubURLType.PULL_REQUEST_COMMIT
     elif re.match(pr_pattern, url):
         return GitHubURLType.PULL_REQUEST
+    elif re.match(branch_pattern, url):
+        return GitHubURLType.BRANCH
     elif re.match(file_pattern, url):
         return GitHubURLType.FILE_PATH
     elif re.match(folder_pattern, url):
         return GitHubURLType.FOLDER_PATH
-    elif re.match(branch_pattern, url):
-        return GitHubURLType.BRANCH
     elif re.match(commit_pattern, url):
         return GitHubURLType.COMMIT
     else:
@@ -344,12 +344,14 @@ def get_github_folder_contents(url_info, ignore_tests=False):
 def fetch_git_diffs(github_url, base_branch=None, ignore_tests=True):
     diffs = None
     github_url_type = identify_github_url_type(github_url)
+    print('github_url_type', github_url_type)
 
     if github_url_type is GitHubURLType.PULL_REQUEST:
         info = extract_repo_and_pr_number(github_url)
         diffs = get_github_pr_diff(info['pr_number'], info['repo_name'], ignore_tests=ignore_tests)
     elif github_url_type is GitHubURLType.BRANCH:
         info = get_github_info_from_url(github_url)
+        print('info', info)
         diffs = get_github_branch_diff(info['repo_name'], info['branch'], base_branch, ignore_tests=ignore_tests)
     elif github_url_type is GitHubURLType.COMMIT:
         info = extract_repo_and_commit_hash(github_url)

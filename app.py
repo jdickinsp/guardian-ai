@@ -20,10 +20,10 @@ st.set_page_config(layout="wide")
 # Define a function to initialize session state
 @st.cache_data(persist="disk")
 def init_session_state():
-    return {"url_input": ""}
+    return {"url_input": "", "selected_review_id": None}
 
 # Initialize session state
-st.session_state = init_session_state()
+st.session_state.update(init_session_state())
 
 
 def display_diff_with_diff2html(diff, per_file=True):
@@ -51,12 +51,16 @@ async def process_stream(stream, client_type, output, key):
         elif client_type == LLMType.OLLAMA:
             content = chunk['message']['content']
         else:
-            raise Exception('unkown client_type')
+            raise Exception('unknown client_type')
         if content:
             st.session_state[key] += content
             output.write(st.session_state[key])
 
 async def render_sidebar(conn):
+    st.sidebar.title("Reviews")
+    if st.sidebar.button(f"New Review", key="new_review"):
+        st.session_state['selected_review_id'] = None
+
     for review in st.session_state['reviews']:
         if review[4]:
             title = f"{review[4][:30]}"
@@ -66,18 +70,19 @@ async def render_sidebar(conn):
         with sidebar_container:
             col1, col2 = st.columns([9, 1], gap="small")
             with col1:
-                review_button_clicked = col1.button(f"{title}: {review[1]}", f"review-{review[0]}")
+                review_button_clicked = col1.button(f"{title}: {review[1]}", key=f"review-{review[0]}")
                 if review_button_clicked:
                     st.session_state['selected_review_id'] = review[0]
             with col2:
-                review_options_clicked = col2.button(f"x", f"review-options-{review[0]}")
+                review_options_clicked = col2.button(f"x", key=f"review-options-{review[0]}")
                 if review_options_clicked:
                     delete_review(conn, review[0])
+                    st.rerun()  # Ensure the UI is refreshed
 
 async def render_create_review_page(conn):
     url_input = st.text_input("Github Url:", st.session_state["url_input"])
     # Save the value to session state
-    st.session_state["user_input"] = url_input
+    st.session_state["url_input"] = url_input
 
     prompt_template_options = ["code-review", "code-summary", "code-debate", 
                             "code-smells", "code-refactor", 'explain-lines',
@@ -130,8 +135,7 @@ async def render_create_review_page(conn):
                 st.write(f"**{file_name}**")
                 sys_out = col2.empty()
                 key = f"ai_comment_{idx}"
-                if key not in st.session_state:
-                    st.session_state[key] = ""
+                st.session_state[key] = ""
                 if per_file_checked:
                     fpatch = diffs.contents[idx] if whole_file_checked else diffs.patches[idx]
                 else:
@@ -224,33 +228,30 @@ async def main():
 
     # Initialize session state flag if it doesn't exist
     if 'has_run' not in st.session_state:
-        print('has_run not in state, setting to False')
+        # print('has_run not in state, setting to False')
         st.session_state['has_run'] = False
 
     # Check the flag and run the function if it hasn't run yet
     if not st.session_state['has_run']:
-        print('has_run is False, running function')
+        # print('has_run is False, running function')
         create_tables(conn)
         st.session_state['has_run'] = True
     else:
         print('has_run is True, function will not run')
 
-    st.session_state['selected_review_id'] = None
-    # Sidebar to list all reviews
-    st.sidebar.title("Reviews")
-    if st.sidebar.button(f"New Review"):
+    # Initialize selected review ID and reviews list
+    if 'selected_review_id' not in st.session_state:
         st.session_state['selected_review_id'] = None
 
     st.session_state['reviews'] = get_all_reviews(conn)
-       
-    await render_sidebar(conn)
-    
+
+    await render_sidebar(conn)  # Render the sidebar with the updated reviews
+
     if not st.session_state['selected_review_id']:
-        await render_create_review_page(conn)
-        st.session_state['reviews'] = get_all_reviews(conn)
-    
+        await render_create_review_page(conn)  # Render the create review page
+
     if st.session_state['selected_review_id']:
-        await render_view_review_page(conn)
+        await render_view_review_page(conn)  # Render the view review page
 
     # Close the database connection
     if conn:
