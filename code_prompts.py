@@ -218,7 +218,7 @@ You can provide the diff in the next message, enclosed in triple backticks (```)
 DEFAULT_PROMPT_OPTIONS = {
     'top_p': 0.9,
     'temperature': 0.8,
-    'max_tokens': 2000,
+    'max_tokens': 3000,
 }
 
 
