@@ -6,7 +6,7 @@ import itertools
 import re
 from github import Github, Auth
 
-from detect import is_test_file
+from detect import is_ignored_file, is_test_file
 
 
 BranchDiff = namedtuple("BranchDiff", ["repo_name", "base_branch", "compare_branch", "file_names", "patches", "contents"])
@@ -24,7 +24,7 @@ class GitHubURLType(Enum):
     UNKNOWN = "Unknown"
 
 
-def identify_github_url_type(url):
+def identify_github_url_type(url, info):
     """
     Identifies the type of GitHub URL (Pull Request, Branch, or Commit).
 
@@ -42,12 +42,13 @@ def identify_github_url_type(url):
     folder_pattern = r'^https:\/\/github\.com\/[^\/]+\/[^\/]+\/tree\/[^\/]+\/.*$'
     file_pattern = r'^https:\/\/github\.com\/[^\/]+\/[^\/]+\/blob\/[^\/]+\/.+$'
 
+    if info['branch'] and info['folder_path'] is None and re.match(branch_pattern, url):
+        return GitHubURLType.BRANCH
+
     if re.match(pr_commit_pattern, url):
         return GitHubURLType.PULL_REQUEST_COMMIT
     elif re.match(pr_pattern, url):
         return GitHubURLType.PULL_REQUEST
-    elif re.match(branch_pattern, url):
-        return GitHubURLType.BRANCH
     elif re.match(file_pattern, url):
         return GitHubURLType.FILE_PATH
     elif re.match(folder_pattern, url):
@@ -101,6 +102,8 @@ def get_github_pr_diff(pr_number, repo_name, ignore_tests=False):
         path = file.filename
         try:
             content = repo.get_contents(path, ref=head_sha)
+            if is_ignored_file(content.path):
+                continue
             if ignore_tests is True and is_test_file(content.path):
                 continue
             if content.encoding == "base64":
@@ -175,25 +178,41 @@ def get_github_branch_diff(repo_name, compare_branch, base_branch=None, ignore_t
     if base_branch is None:
         base_branch = repo.default_branch
 
-    # Get comparison between base and compare branches
-    comparison = repo.compare(base_branch, compare_branch)
+    paths = []
+    files = []
     file_names = []
     contents = []
     patches = []
+    # Get comparison between base and compare branches
+    if base_branch != compare_branch:
+        comparison = repo.compare(base_branch, compare_branch)
+        paths = [f.filename for f in comparison.files]
+    else:
+        master_ref = repo.get_branch(base_branch)
+        # Get the SHA of the master branch
+        master_sha = master_ref.commit.sha
 
-    if len(comparison.files) == 0:
-        raise Exception('compare branch is not different than base branch')
+        # Get the tree of the master branch, recursively
+        master_tree = repo.get_git_tree(master_sha, recursive=True).tree
+
+        # Filter out only the blob objects (files)
+        files = [item for item in master_tree if item.type == 'blob']
+        paths = [f.path for f in files]
     
-    for file in comparison.files:
-        path = file.filename
+    for idx, path in enumerate(paths):
         try:
             content = repo.get_contents(path, ref=compare_branch)
+            if is_ignored_file(content.path):
+                continue
             if ignore_tests is True and is_test_file(content.path):
                 continue
             if content.encoding == "base64":
                 file_content = content.decoded_content.decode()
                 contents.append(file_content)
-                patches.append(get_diff_header(file) + file.patch)
+                if base_branch != compare_branch:
+                    patches.append(get_diff_header(files[idx]) + files[idx].patch)
+                else:
+                    patches.append(file_content)
                 file_names.append(path)
         except Exception as e:
             print(f"Error retrieving content for {path}: {str(e)}")
@@ -250,6 +269,8 @@ def get_github_commit_diff(repo_name, commit_hash, ignore_tests=False):
         path = file.filename
         try:
             content = repo.get_contents(path, ref=commit_hash)
+            if is_ignored_file(content.path):
+                continue
             if ignore_tests is True and is_test_file(content.path):
                 continue
             if content.encoding == "base64":
@@ -330,6 +351,8 @@ def get_github_folder_contents(url_info, ignore_tests=False):
     filenames = []
 
     for content_file in contents:
+        if is_ignored_file(content_file.path):
+            continue
         if ignore_tests is True and is_test_file(content_file.path):
             continue
         if content_file.type == 'file':  # Ensure we only process files
@@ -343,15 +366,14 @@ def get_github_folder_contents(url_info, ignore_tests=False):
 
 def fetch_git_diffs(github_url, base_branch=None, ignore_tests=True):
     diffs = None
-    github_url_type = identify_github_url_type(github_url)
+    info = get_github_info_from_url(github_url)
+    github_url_type = identify_github_url_type(github_url, info)
     print('github_url_type', github_url_type)
 
     if github_url_type is GitHubURLType.PULL_REQUEST:
         info = extract_repo_and_pr_number(github_url)
         diffs = get_github_pr_diff(info['pr_number'], info['repo_name'], ignore_tests=ignore_tests)
     elif github_url_type is GitHubURLType.BRANCH:
-        info = get_github_info_from_url(github_url)
-        print('info', info)
         diffs = get_github_branch_diff(info['repo_name'], info['branch'], base_branch, ignore_tests=ignore_tests)
     elif github_url_type is GitHubURLType.COMMIT:
         info = extract_repo_and_commit_hash(github_url)
@@ -360,10 +382,8 @@ def fetch_git_diffs(github_url, base_branch=None, ignore_tests=True):
         info = get_commit_hash_from_url(github_url)
         diffs = get_github_commit_diff(info['repo_name'], info['commit_hash'], ignore_tests=ignore_tests)
     elif github_url_type is GitHubURLType.FILE_PATH:
-        info = get_github_info_from_url(github_url)
         diffs = get_github_file_content(info)
     elif github_url_type is GitHubURLType.FOLDER_PATH:
-        info = get_github_info_from_url(github_url)
         diffs = get_github_folder_contents(info, ignore_tests=ignore_tests)
     else:
         raise Exception(f"Error: Invalid github url")

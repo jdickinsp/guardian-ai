@@ -104,3 +104,21 @@ def is_test_file(file_name):
     
     # Check if the file name matches any of the test patterns
     return bool(test_regex.search(file_name))
+
+
+def is_ignored_file(file_name):
+    ignored_extensions = [
+        '.ipynb', '.png', '.jpg', '.jpeg', '.gif', '.svg', '.bmp', '.ico',  # Image files
+        '.mp3', '.wav', '.flac', '.aac', '.ogg', '.wma',  # Audio files
+        '.mp4', '.avi', '.mov', '.wmv', '.flv', '.mkv',  # Video files
+        '.pdf', '.doc', '.docx', '.xls', '.xlsx', '.ppt', '.pptx',  # Document files
+        '.zip', '.tar', '.gz', '.rar', '.7z',  # Compressed files
+        '.exe', '.dll', '.so', '.dylib',  # Executable and library files
+        '.log', '.bak', '.tmp',  # Log and temporary files
+        '.DS_Store', 'Thumbs.db', '.gitignore', '.gitattributes',  # System and config files
+        'LICENSE', 'README.md',
+        '__init__.py'
+    ]
+    
+    # Check if the file has an ignored extension
+    return any(file_name.endswith(ext) for ext in ignored_extensions)
