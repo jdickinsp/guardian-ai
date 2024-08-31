@@ -109,8 +109,11 @@ class GitHubRepoHelper:
             url_parts = [part for part in github_url.split('/') if part]
             owner = url_parts[2]
             repo = url_parts[3]
-            ref_index = url_parts.index('tree') if 'tree' in url_parts else url_parts.index('blob')
-            path_parts = url_parts[ref_index + 1:]
+            ref_index = -1
+            path_parts = []
+            if 'tree' in url_parts or 'blob' in url_parts:
+                ref_index = url_parts.index('tree') if 'tree' in url_parts else url_parts.index('blob')
+                path_parts = url_parts[ref_index + 1:]
         except (IndexError, ValueError):
             raise ValueError("Invalid GitHub URL")
 
@@ -128,14 +131,15 @@ class GitHubRepoHelper:
                 branch_name = potential_branch
                 break
 
-        if not branch_name:
-            raise ValueError("Branch name not found in URL path")
-
-        # Determine the folder path and file path
-        folder_path = '/'.join(path_parts[len(branch_name.split('/')):])
-        if len(folder_path) == 0:
+        if branch_name:
+            # Determine the folder path and file path
+            folder_path = '/'.join(path_parts[len(branch_name.split('/')):])
+            if len(folder_path) == 0:
+                folder_path = None
+            file_path = folder_path if folder_path else None
+        else:
             folder_path = None
-        file_path = folder_path if folder_path else None
+            file_path = None
         
         return {
             "owner": owner,
