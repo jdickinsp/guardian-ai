@@ -25,7 +25,7 @@ def string_to_enum(enum, s):
 
 def get_default_llm_model_name(client_type):
     if client_type is LLMType.OPENAI:
-        return 'gpt-4o'
+        return 'gpt-4o-mini'
     elif client_type is LLMType.OLLAMA:
         return 'llama3'
     else:
