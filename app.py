@@ -96,9 +96,14 @@ async def render_response(content, key, sys_out):
         sys_out.write(st.session_state[key])
 
 async def render_sidebar(conn):
-    st.sidebar.title("Reviews")
-    if st.sidebar.button(f"New Review", key="new_review"):
-        st.session_state['selected_review_id'] = None
+    header_container = st.sidebar.container(border=True)
+    with header_container:
+        left_side, _, right_side = header_container.columns([5, 6, 5], gap="small")
+        with left_side:
+            left_side.write("## Reviews")
+        with right_side:
+            if right_side.button(f"📝", key="new_review", type="primary", use_container_width=True):
+                st.session_state['selected_review_id'] = None
 
     for review in st.session_state['reviews']:
         if review[4]:
@@ -129,12 +134,12 @@ async def render_create_review_page(conn):
     prompt_template_selected = st.selectbox("Prompt template:", prompt_template_options)
     prompt_input = st.text_area("Prompt: (Optional)", None)
 
-    stream_checked = st.checkbox("Stream", True)
-    per_file_checked = st.checkbox("Per File", True)
-    whole_file_checked = st.checkbox("Whole File", False)
-    ignore_tests_checked = st.checkbox("Ignore Tests", True)
+    stream_checked = st.checkbox("Stream Output", True)
+    per_file_checked = st.checkbox("Per File Analysis", True)
+    whole_file_checked = st.checkbox("Analyze The Whole File", False)
+    ignore_tests_checked = st.checkbox("Ignore Tests In Review", True)
 
-    button_clicked = st.button("Get Response")
+    button_clicked = st.button("Get Response", type="primary")
 
     client_type = string_to_enum(LLMType, os.getenv('DEFAULT_LLM_CLIENT', "openai"))
     model_name = os.getenv('DEFAULT_LLM_MODEL', get_default_llm_model_name(client_type))

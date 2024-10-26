@@ -105,15 +105,20 @@ class GitHubRepoHelper:
 
     @staticmethod
     def get_github_info_from_url(github_url):
+        is_folder = False
+        is_file = False
         try:
             url_parts = [part for part in github_url.split('/') if part]
             owner = url_parts[2]
             repo = url_parts[3]
-            ref_index = -1
-            path_parts = []
-            if 'tree' in url_parts or 'blob' in url_parts:
-                ref_index = url_parts.index('tree') if 'tree' in url_parts else url_parts.index('blob')
-                path_parts = url_parts[ref_index + 1:]
+            ref_index = 0
+            if 'tree' in url_parts:
+                is_folder = True
+                ref_index = url_parts.index('tree')
+            elif 'blob' in url_parts:
+                is_file = True 
+                ref_index = url_parts.index('blob')
+            path_parts = url_parts[ref_index + 1:]
         except (IndexError, ValueError):
             raise ValueError("Invalid GitHub URL")
 
@@ -131,23 +136,20 @@ class GitHubRepoHelper:
                 branch_name = potential_branch
                 break
 
+        # if not branch_name:
+        #     raise ValueError("Branch name not found in URL path")
+
+        # Determine the folder path and file path
+        src_path = None
         if branch_name:
-            # Determine the folder path and file path
-            folder_path = '/'.join(path_parts[len(branch_name.split('/')):])
-            if len(folder_path) == 0:
-                folder_path = None
-            file_path = folder_path if folder_path else None
-        else:
-            folder_path = None
-            file_path = None
-        
+            src_path = '/'.join(path_parts[len(branch_name.split('/')):])
         return {
             "owner": owner,
             "repo": repo,
             "repo_name": f"{owner}/{repo}",
             "branch": branch_name,
-            "folder_path": folder_path if not file_path else None,
-            "file_path": file_path
+            "folder_path": src_path if is_folder is True else None,
+            "file_path": src_path if is_file is True else None,
         }
 
 
