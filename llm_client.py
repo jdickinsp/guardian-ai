@@ -104,7 +104,6 @@ class OllamaClient(LLMClient):
         self.model_name = model_name
 
     async def async_chat(self, system_prompt, user_message, prompt_options):
-        print('system_prompt OllamaClient')
         try:
             content = LLAMA_3_TEMPLATE(system=system_prompt, message=user_message)
             stream = await self.async_client.chat(
@@ -159,7 +158,6 @@ class ClaudeClient(LLMClient):
         self.model_name = model_name
 
     async def async_chat(self, system_prompt, user_message, prompt_options):
-        print('system_prompt ClaudeClient')
         try:
             stream = await self.async_client.messages.create(
                 model=self.model_name,
