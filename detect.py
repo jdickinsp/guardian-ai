@@ -57,6 +57,38 @@ def get_programming_language(extension):
 
 
 def is_test_file(file_name):
+    """
+    Determines if a given file name corresponds to a test file.
+
+    This function uses a combination of common naming conventions and
+    language-specific patterns to identify test files across various
+    programming languages.
+
+    Args:
+        file_name (str): The name of the file to check.
+
+    Returns:
+        bool: True if the file is identified as a test file, False otherwise.
+
+    The function performs the following checks:
+    1. Verifies if the file has a valid programming language extension.
+    2. Excludes files that contain test-related words but are not actual test files.
+    3. Checks for common test file indicators in the file name.
+    4. Applies special case patterns for different naming conventions.
+    5. Checks for camelCase naming conventions used in some languages.
+
+    Examples:
+        >>> is_test_file("test_example.py")
+        True
+        >>> is_test_file("example_test.js")
+        True
+        >>> is_test_file("ExampleSpec.scala")
+        True
+        >>> is_test_file("regular_file.py")
+        False
+        >>> is_test_file("testing_utils.py")
+        False
+    """
     # List of common test file prefixes and suffixes
     test_indicators = [
         'test_', '_test', 'tests_', '_tests', 'spec_', '_spec'
