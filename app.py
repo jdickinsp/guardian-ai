@@ -150,77 +150,79 @@ async def render_sidebar(conn):
 
 async def render_create_review_page(conn):
     st.markdown("## Create New Review")
-
+    
     with st.container():
-        # GitHub URL input
-        url_input = st.text_input(
-            "GitHub URL",
-            st.session_state.url_input,
-            placeholder="https://github.com/username/repo/pull/123",
-        )
-        st.session_state.url_input = url_input
-
-        # Two-column layout for template and prompt
-        col1, col2 = st.columns([1, 2])
-
-        with col1:
-            prompt_template_options = [
-                "code-review",
-                "code-summary",
-                "code-debate",
-                "code-smells",
-                "code-refactor",
-                "explain-lines",
-                "doc-strings",
-                "doc-markdown",
-                "unit-test",
-                None,
-            ]
-            prompt_template_selected = st.selectbox(
-                "Review Template", prompt_template_options, index=0
+        # Create a visual container with a border and background
+        with st.expander("Create New Review", expanded=True):
+            # GitHub URL input
+            url_input = st.text_input(
+                "GitHub URL",
+                st.session_state.url_input,
+                placeholder="https://github.com/username/repo/pull/123",
             )
+            st.session_state.url_input = url_input
 
-        with col2:
-            prompt_input = st.text_area("Custom Instructions (Optional)", height=100)
+            # Two-column layout for template and prompt
+            col1, col2 = st.columns([1, 2])
 
-        # Options in columns
-        col1, col2 = st.columns(2)
-        with col1:
-            stream_checked = st.checkbox("Stream Output", True)
-            per_file_checked = st.checkbox("Per File Analysis", True)
-        with col2:
-            whole_file_checked = st.checkbox("Analyze Whole File", False)
-            ignore_tests_checked = st.checkbox("Ignore Tests", True)
-
-        # Start Review button
-        col1, _ = st.columns([2, 3])  # Adjusted ratio for button only
-        start_review = False
-        with col1:
-            if st.button("Start Review", type="primary", use_container_width=False):
-                start_review = True
-
-        # Process review outside of any columns
-        if start_review:
-            with st.spinner("Processing..."):
-                diffs = fetch_git_diffs(url_input, ignore_tests=ignore_tests_checked)
-                review_id = insert_review(
-                    conn,
-                    diffs.repo_name,
-                    url_input,
-                    prompt_template_selected,
-                    prompt_input,
+            with col1:
+                prompt_template_options = [
+                    "code-review",
+                    "code-summary",
+                    "code-debate",
+                    "code-smells",
+                    "code-refactor",
+                    "explain-lines",
+                    "doc-strings",
+                    "doc-markdown",
+                    "unit-test",
+                    None,
+                ]
+                prompt_template_selected = st.selectbox(
+                    "Review Template", prompt_template_options, index=0
                 )
-                
-                await process_review(
-                    diffs,
-                    per_file_checked,
-                    whole_file_checked,
-                    prompt_input,
-                    prompt_template_selected,
-                    stream_checked,
-                    conn,
-                    review_id,
-                )
+
+            with col2:
+                prompt_input = st.text_area("Custom Instructions (Optional)", height=100)
+
+            # Options in columns
+            col1, col2 = st.columns(2)
+            with col1:
+                stream_checked = st.checkbox("Stream Output", True)
+                per_file_checked = st.checkbox("Per File Analysis", True)
+            with col2:
+                whole_file_checked = st.checkbox("Analyze Whole File", False)
+                ignore_tests_checked = st.checkbox("Ignore Tests", True)
+
+            # Start Review button
+            col1, _ = st.columns([2, 3])  # Adjusted ratio for button only
+            start_review = False
+            with col1:
+                if st.button("Start Review", type="primary", use_container_width=False):
+                    start_review = True
+
+    # Process review outside of the panel
+    if start_review:
+        with st.spinner("Processing..."):
+            diffs = fetch_git_diffs(url_input, ignore_tests=ignore_tests_checked)
+            review_id = insert_review(
+                conn,
+                diffs.repo_name,
+                url_input,
+                prompt_template_selected,
+                prompt_input,
+            )
+            
+            await process_review(
+                diffs,
+                per_file_checked,
+                whole_file_checked,
+                prompt_input,
+                prompt_template_selected,
+                stream_checked,
+                conn,
+                review_id,
+            )
 
 
 async def process_review(
