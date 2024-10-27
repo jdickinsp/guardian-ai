@@ -149,14 +149,14 @@ class OllamaClient(LLMClient):
         )
 
 class ClaudeClient(LLMClient):
-    def __init__(self, model_name, max_context_length=100_000):
+    def __init__(self, model_name, max_tokens=100_000):
         api_key = os.getenv('ANTHROPIC_API_KEY')
         if not api_key:
             raise ValueError("ANTHROPIC_API_KEY environment variable is not set")
         self.async_client = AsyncAnthropic(api_key=api_key)
         self.client = Anthropic(api_key=api_key)
         self.model_name = model_name
-        self.max_context_length = max_context_length
+        self.max_tokens = max_tokens
 
     async def async_chat(self, system_prompt, user_message, prompt_options):
         try:
@@ -166,10 +166,9 @@ class ClaudeClient(LLMClient):
                 messages=[
                     {"role": "user", "content": user_message}
                 ],
-                max_tokens=prompt_options.get('max_tokens', 1000),
+                max_tokens=prompt_options.get('max_tokens', self.max_tokens),
                 temperature=prompt_options.get('temperature', 0.7),
                 stream=True,
-                max_tokens_to_sample=self.max_context_length,
             )
             return stream
         except Exception as e:
@@ -183,9 +182,8 @@ class ClaudeClient(LLMClient):
             messages=[
                 {"role": "user", "content": user_message}
             ],
-            max_tokens=prompt_options.get('max_tokens', 1000),
+            max_tokens=prompt_options.get('max_tokens', self.max_tokens),
             temperature=prompt_options.get('temperature', 0.7),
-            max_tokens_to_sample=self.max_context_length,
         )
         return resp.content[0].text
 
@@ -196,8 +194,7 @@ class ClaudeClient(LLMClient):
             messages=[
                 {"role": "user", "content": user_message}
             ],
-            max_tokens=prompt_options.get('max_tokens', 1000),
+            max_tokens=prompt_options.get('max_tokens', self.max_tokens),
             temperature=prompt_options.get('temperature', 0.7),
             stream=True,
-            max_tokens_to_sample=self.max_context_length,
         )
