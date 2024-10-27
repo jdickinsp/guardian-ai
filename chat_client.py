@@ -27,7 +27,11 @@ class ChatClient:
         if prompt_template and (prompt is None or prompt == ""):
             code_prompt = CODE_PROMPTS.get(prompt_template)
             if not code_prompt:
-                raise Exception(f"Error: Invalid prompt_template")
+                # Use a default prompt if the template doesn't exist
+                code_prompt = CODE_PROMPTS.get('default', {
+                    "system_prompt": "You are a helpful coding assistant.",
+                    "options": DEFAULT_PROMPT_OPTIONS
+                })
         if (prompt is None or prompt == '') and (prompt_template is None or prompt_template == ''):
             raise Exception('Error: No prompt or prompt_template')
 

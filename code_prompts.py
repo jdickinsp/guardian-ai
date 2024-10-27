@@ -284,10 +284,9 @@ DOC_STRINGS_SETTINGS = {
 
 
 CODE_PROMPTS = {
-    'code-debate': { 
-        'type': 'debate', 
-        'system_prompt': CODE_DEBATE_PROMPT, 
-        'options': CODE_DEBATE_SETTINGS 
+    "default": {
+        "system_prompt": "You are a helpful coding assistant.",
+        "options": DEFAULT_PROMPT_OPTIONS
     },
     'code-refactor': { 
         'type': 'refactor', 
