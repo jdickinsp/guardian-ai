@@ -2,7 +2,7 @@ import re
 
 
 def get_line_count(code):
-    return code.count('\n') + 1
+    return code.count("\n") + 1
 
 
 def get_code_height(code):
@@ -90,74 +90,121 @@ def is_test_file(file_name):
         False
     """
     # List of common test file prefixes and suffixes
-    test_indicators = [
-        'test_', '_test', 'tests_', '_tests', 'spec_', '_spec'
-    ]
-    
+    test_indicators = ["test_", "_test", "tests_", "_tests", "spec_", "_spec"]
+
     # List of common programming language extensions
     extensions = [
-        'py', 'js', 'jsx', 'ts', 'tsx', 'rb', 'java', 'cs', 
-        'go', 'rs', 'php', 'swift', 'kt', 'scala', 'cpp'
+        "py",
+        "js",
+        "jsx",
+        "ts",
+        "tsx",
+        "rb",
+        "java",
+        "cs",
+        "go",
+        "rs",
+        "php",
+        "swift",
+        "kt",
+        "scala",
+        "cpp",
     ]
-    
+
     # Convert filename to lowercase for case-insensitive matching
     lower_file_name = file_name.lower()
-    
+
     # Check if the file has a valid extension
-    if not any(lower_file_name.endswith(f'.{ext}') for ext in extensions):
+    if not any(lower_file_name.endswith(f".{ext}") for ext in extensions):
         return False
-    
+
     # Exclude files that contain 'test' but are not actual test files
     excluded_patterns = [
-        r'.*testing.*',
-        r'.*testdata.*',
-        r'.*testutils.*',
+        r".*testing.*",
+        r".*testdata.*",
+        r".*testutils.*",
     ]
-    
+
     if any(re.match(pattern, lower_file_name) for pattern in excluded_patterns):
         return False
-    
+
     # Check for test indicators in the filename
     for indicator in test_indicators:
         if indicator in lower_file_name:
             return True
-    
+
     # Special cases for languages with different naming conventions
     special_cases = [
-        r'^test.*\.',
-        r'^.*test\.',
-        r'^.*tests?\.',
-        r'^.*spec\.',
-        r'^.*specs?\.',
+        r"^test.*\.",
+        r"^.*test\.",
+        r"^.*tests?\.",
+        r"^.*spec\.",
+        r"^.*specs?\.",
     ]
-    
+
     if any(re.match(pattern, lower_file_name) for pattern in special_cases):
         return True
-    
+
     # Additional check for camelCase naming in some languages
     camel_case_patterns = [
-        r'^.*Test\.',
-        r'^.*Tests?\.',
-        r'^.*Spec\.',
-        r'^.*Specs?\.',
+        r"^.*Test\.",
+        r"^.*Tests?\.",
+        r"^.*Spec\.",
+        r"^.*Specs?\.",
     ]
-    
+
     return any(re.match(pattern, file_name) for pattern in camel_case_patterns)
 
 
 def is_ignored_file(file_name):
     ignored_extensions = [
-        '.ipynb', '.png', '.jpg', '.jpeg', '.gif', '.svg', '.bmp', '.ico',  # Image files
-        '.mp3', '.wav', '.flac', '.aac', '.ogg', '.wma',  # Audio files
-        '.mp4', '.avi', '.mov', '.wmv', '.flv', '.mkv',  # Video files
-        '.pdf', '.doc', '.docx', '.xls', '.xlsx', '.ppt', '.pptx',  # Document files
-        '.zip', '.tar', '.gz', '.rar', '.7z',  # Compressed files
-        '.exe', '.dll', '.so', '.dylib',  # Executable and library files
-        '.log', '.bak', '.tmp',  # Log and temporary files
-        '.DS_Store', 'Thumbs.db', '.gitignore', '.gitattributes',  # System and config files
-        'LICENSE', 'README.md',
-        '__init__.py'
+        ".ipynb",
+        ".png",
+        ".jpg",
+        ".jpeg",
+        ".gif",
+        ".svg",
+        ".bmp",
+        ".ico",  # Image files
+        ".mp3",
+        ".wav",
+        ".flac",
+        ".aac",
+        ".ogg",
+        ".wma",  # Audio files
+        ".mp4",
+        ".avi",
+        ".mov",
+        ".wmv",
+        ".flv",
+        ".mkv",  # Video files
+        ".pdf",
+        ".doc",
+        ".docx",
+        ".xls",
+        ".xlsx",
+        ".ppt",
+        ".pptx",  # Document files
+        ".zip",
+        ".tar",
+        ".gz",
+        ".rar",
+        ".7z",  # Compressed files
+        ".exe",
+        ".dll",
+        ".so",
+        ".dylib",  # Executable and library files
+        ".log",
+        ".bak",
+        ".tmp",  # Log and temporary files
+        ".DS_Store",
+        "Thumbs.db",
+        ".gitignore",
+        ".gitattributes",  # System and config files
+        "LICENSE",
+        "README.md",
+        "__init__.py",
     ]
-    
+
     # Check if the file has an ignored extension
     return any(file_name.endswith(ext) for ext in ignored_extensions)

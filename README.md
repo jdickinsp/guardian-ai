@@ -1,6 +1,6 @@
 # Guardian AI
 
-Welcome to Guardian AI! This is a Python script designed to facilitate code review processes by extracting information from GitHub Pull Request, GitHub Branch or GitHub Commit URLs and generating prompts for feedback. This README provides instructions on how to get started with the script.
+Welcome to Guardian AI! This is a project designed to facilitate code review processes by extracting information from GitHub Pull Request, GitHub Branch or GitHub Commit URLs and generating prompts for feedback. This README provides instructions on how to get started with the script.
 
 ## Prerequisites
 

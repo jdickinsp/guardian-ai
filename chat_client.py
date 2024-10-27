@@ -1,6 +1,12 @@
 from dataclasses import dataclass
-from code_prompts import DEFAULT_PROMPT_OPTIONS, CODE_PROMPTS, SYSTEM_PROMPT_DIFF_ENDING, SYSTEM_PROMPT_CODE_ENDING
+from code_prompts import (
+    DEFAULT_PROMPT_OPTIONS,
+    CODE_PROMPTS,
+    SYSTEM_PROMPT_DIFF_ENDING,
+    SYSTEM_PROMPT_CODE_ENDING,
+)
 from llm_client import ClaudeClient, LLMType, OllamaClient, OpenAIClient
+
 
 @dataclass
 class ChatPrompt:
@@ -28,28 +34,37 @@ class ChatClient:
             code_prompt = CODE_PROMPTS.get(prompt_template)
             if not code_prompt:
                 # Use a default prompt if the template doesn't exist
-                code_prompt = CODE_PROMPTS.get('default', {
-                    "system_prompt": "You are a helpful coding assistant.",
-                    "options": DEFAULT_PROMPT_OPTIONS
-                })
-        if (prompt is None or prompt == '') and (prompt_template is None or prompt_template == ''):
-            raise Exception('Error: No prompt or prompt_template')
+                code_prompt = CODE_PROMPTS.get(
+                    "default",
+                    {
+                        "system_prompt": "You are a helpful coding assistant.",
+                        "options": DEFAULT_PROMPT_OPTIONS,
+                    },
+                )
+        if (prompt is None or prompt == "") and (
+            prompt_template is None or prompt_template == ""
+        ):
+            raise Exception("Error: No prompt or prompt_template")
 
         options = DEFAULT_PROMPT_OPTIONS
         if prompt:
-            if patch[:4] == 'diff':
+            if patch[:4] == "diff":
                 system_prompt = f"{prompt}\n{SYSTEM_PROMPT_DIFF_ENDING}"
             else:
                 system_prompt = f"{prompt}\n{SYSTEM_PROMPT_CODE_ENDING}"
         else:
-            options = code_prompt.get('options') or DEFAULT_PROMPT_OPTIONS
-            system_prompt = code_prompt.get('system_prompt')
+            options = code_prompt.get("options") or DEFAULT_PROMPT_OPTIONS
+            system_prompt = code_prompt.get("system_prompt")
         user_message = f"```{patch}```"
 
         return ChatPrompt(system_prompt, user_message, options)
 
     async def async_chat_response(self, prompt: ChatPrompt):
-        return await self.client.async_chat(prompt.system_prompt, prompt.user_message, prompt.options)
+        return await self.client.async_chat(
+            prompt.system_prompt, prompt.user_message, prompt.options
+        )
 
     def chat_response(self, prompt: ChatPrompt):
-        return self.client.chat_response(prompt.system_prompt, prompt.user_message, prompt.options)
+        return self.client.chat_response(
+            prompt.system_prompt, prompt.user_message, prompt.options
+        )

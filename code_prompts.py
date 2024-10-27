@@ -216,121 +216,121 @@ You can provide the diff in the next message, enclosed in triple backticks (```)
 
 
 DEFAULT_PROMPT_OPTIONS = {
-    'top_p': 0.9,
-    'temperature': 0.8,
-    'max_tokens': 3000,
+    "top_p": 0.9,
+    "temperature": 0.8,
+    "max_tokens": 3000,
 }
 
 
 CODE_DEBATE_SETTINGS = {
-    'top_p': 0.9,
-    'temperature': 0.8,
-    'max_tokens': 1500,
-    'n': 1,
-    'presence_penalty': 0.5,
-    'frequency_penalty': 0.2,
+    "top_p": 0.9,
+    "temperature": 0.8,
+    "max_tokens": 1500,
+    "n": 1,
+    "presence_penalty": 0.5,
+    "frequency_penalty": 0.2,
 }
 
 
 CODE_REFACTOR_SETTINGS = {
-    'top_p': 0.9,
-    'temperature': 0.6,
-    'max_tokens': 1000,
-    'n': 1,
-    'stop': ['```'],
-    'presence_penalty': 0.1,
-    'frequency_penalty': 0.4,
+    "top_p": 0.9,
+    "temperature": 0.6,
+    "max_tokens": 1000,
+    "n": 1,
+    "stop": ["```"],
+    "presence_penalty": 0.1,
+    "frequency_penalty": 0.4,
 }
 
 
 CODE_REVIEW_SETTINGS = {
-    'top_p': 0.9,
-    'temperature': 0.2,
-    'max_tokens': 1500,
-    'n': 1,
-    'stop': ['```'],
-    'presence_penalty': 0.1,
-    'frequency_penalty': 0.3,
+    "top_p": 0.9,
+    "temperature": 0.2,
+    "max_tokens": 1500,
+    "n": 1,
+    "stop": ["```"],
+    "presence_penalty": 0.1,
+    "frequency_penalty": 0.3,
 }
 
 CODE_SMELLS_SETTINGS = {
-    'top_p': 0.9,
-    'temperature': 0.4,
-    'max_tokens': 1500,
-    'n': 1,
-    'presence_penalty': 0.1,
-    'frequency_penalty': 0.3,
+    "top_p": 0.9,
+    "temperature": 0.4,
+    "max_tokens": 1500,
+    "n": 1,
+    "presence_penalty": 0.1,
+    "frequency_penalty": 0.3,
 }
 
 
 CODE_SUMMARY_SETTINGS = {
-    'top_p': 0.9,
-    'temperature': 0.7,
-    'max_tokens': 500,
-    'n': 1,
-    'presence_penalty': 0.1,
-    'frequency_penalty': 0.3,
+    "top_p": 0.9,
+    "temperature": 0.7,
+    "max_tokens": 500,
+    "n": 1,
+    "presence_penalty": 0.1,
+    "frequency_penalty": 0.3,
 }
 
 
 DOC_STRINGS_SETTINGS = {
-    'top_p': 0.9,
-    'temperature': 0.2,
-    'max_tokens': 1500,
-    'n': 1,
-    'presence_penalty': 0.1,
-    'frequency_penalty': 0.3,
+    "top_p": 0.9,
+    "temperature": 0.2,
+    "max_tokens": 1500,
+    "n": 1,
+    "presence_penalty": 0.1,
+    "frequency_penalty": 0.3,
 }
 
 
 CODE_PROMPTS = {
     "default": {
         "system_prompt": "You are a helpful coding assistant.",
-        "options": DEFAULT_PROMPT_OPTIONS
+        "options": DEFAULT_PROMPT_OPTIONS,
     },
-    'code-refactor': { 
-        'type': 'refactor', 
-        'system_prompt': CODE_REFACTOR_PROMPT, 
-        'options': CODE_REFACTOR_SETTINGS 
+    "code-refactor": {
+        "type": "refactor",
+        "system_prompt": CODE_REFACTOR_PROMPT,
+        "options": CODE_REFACTOR_SETTINGS,
     },
-    'code-review': { 
-        'type': 'review', 
-        'system_prompt': CODE_REVIEW_PROMPT, 
-        'options': CODE_REVIEW_SETTINGS 
-   },
-    'code-smells': { 
-        'type': 'review', 
-        'system_prompt': CODE_SMELLS_PROMPT, 
-        'options': CODE_SMELLS_SETTINGS 
+    "code-review": {
+        "type": "review",
+        "system_prompt": CODE_REVIEW_PROMPT,
+        "options": CODE_REVIEW_SETTINGS,
     },
-    'code-summary': { 
-        'type': 'summary', 
-        'system_prompt': CODE_SUMMARY_PROMPT, 
-        'options': CODE_SUMMARY_SETTINGS 
+    "code-smells": {
+        "type": "review",
+        "system_prompt": CODE_SMELLS_PROMPT,
+        "options": CODE_SMELLS_SETTINGS,
     },
-    'doc-strings': {
-        'type': 'review',
-        'system_prompt': DOC_STRINGS_PROMPT,
-        'options': DOC_STRINGS_SETTINGS
+    "code-summary": {
+        "type": "summary",
+        "system_prompt": CODE_SUMMARY_PROMPT,
+        "options": CODE_SUMMARY_SETTINGS,
     },
-    'doc-markdown': {
-        'type': 'review',
-        'system_prompt': DOC_MARKDOWN_PROMPT,
-        'options': DOC_STRINGS_SETTINGS
+    "doc-strings": {
+        "type": "review",
+        "system_prompt": DOC_STRINGS_PROMPT,
+        "options": DOC_STRINGS_SETTINGS,
     },
-     'code-debate': {
-        'type': 'review',
-        'system_prompt': CODE_DEBATE_PROMPT,
-        'options': CODE_DEBATE_SETTINGS
+    "doc-markdown": {
+        "type": "review",
+        "system_prompt": DOC_MARKDOWN_PROMPT,
+        "options": DOC_STRINGS_SETTINGS,
     },
-    'explain-lines': {
-        'type': 'review',
-        'system_prompt': EXPLAIN_LINES_PROMPT,
-        'options': DEFAULT_PROMPT_OPTIONS
+    "code-debate": {
+        "type": "review",
+        "system_prompt": CODE_DEBATE_PROMPT,
+        "options": CODE_DEBATE_SETTINGS,
     },
-    'unit-test': {
-        'type': 'review',
-        'system_prompt': UNIT_TEST_PROMPT,
-        'options': DOC_STRINGS_SETTINGS
-    }
+    "explain-lines": {
+        "type": "review",
+        "system_prompt": EXPLAIN_LINES_PROMPT,
+        "options": DEFAULT_PROMPT_OPTIONS,
+    },
+    "unit-test": {
+        "type": "review",
+        "system_prompt": UNIT_TEST_PROMPT,
+        "options": DOC_STRINGS_SETTINGS,
+    },
 }

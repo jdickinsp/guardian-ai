@@ -1,0 +1,10 @@
+[flake8]
+max-line-length = 88
+extend-ignore = E203,E501
+# Optionally, only ignore E501 for files or patterns where you use lots of multi-line strings
+per-file-ignores = 
+    code_prompts.py:E501
+    **/prompts/*.py:E501
+exclude = .git,__pycache__,build,dist,.eggs,.venv
+max-complexity = 18
+select = B,C,E,F,W,T4,B9

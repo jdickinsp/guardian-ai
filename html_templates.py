@@ -1,5 +1,5 @@
-CODE_HIGHLIGHT_HTML_CONTENT = lambda language,code: \
-f"""
+CODE_HIGHLIGHT_HTML_CONTENT = (
+    lambda language, code: f"""
 <html>
 <head>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.4.0/styles/github.min.css">
@@ -33,10 +33,11 @@ f"""
 </body>
 </html>
 """
+)
 
 
-DIFF_VIEWER_HTML_CONTENT = lambda diff: \
-f"""
+DIFF_VIEWER_HTML_CONTENT = (
+    lambda diff: f"""
 <html>
 <head>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/diff2html/bundles/css/diff2html.min.css">
@@ -67,10 +68,11 @@ f"""
 </body>
 </html>
 """
+)
 
 
-MERMAID_HTML_CONTENT = lambda mermaid_code: \
-f"""
+MERMAID_HTML_CONTENT = (
+    lambda mermaid_code: f"""
 <div class="mermaid">
     {mermaid_code}
 </div>
@@ -79,3 +81,4 @@ f"""
     mermaid.initialize({{ startOnLoad: true }});
 </script>
 """
+)

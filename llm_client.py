@@ -8,14 +8,15 @@ import ollama
 from anthropic import Anthropic, AsyncAnthropic
 
 
-LLAMA_3_TEMPLATE = lambda system, message: \
-f"""<|begin_of_text|><|start_header_id|>system<|end_header_id|>{system}<|eot_id|><|start_header_id|>user<|end_header_id|>{message}<|eot_id|><|start_header_id|>assistant<|end_header_id|>"""
+LLAMA_3_TEMPLATE = (
+    lambda system, message: f"""<|begin_of_text|><|start_header_id|>system<|end_header_id|>{system}<|eot_id|><|start_header_id|>user<|end_header_id|>{message}<|eot_id|><|start_header_id|>assistant<|end_header_id|>"""
+)
 
 
 class LLMType(Enum):
-    OLLAMA = 'ollama'
-    OPENAI = 'openai'
-    CLAUDE = 'claude'
+    OLLAMA = "ollama"
+    OPENAI = "openai"
+    CLAUDE = "claude"
 
 
 def string_to_enum(enum, s):
@@ -27,14 +28,14 @@ def string_to_enum(enum, s):
 
 def get_default_llm_model_name(client_type):
     if client_type is LLMType.OPENAI:
-        return 'gpt-4o-mini'
+        return "gpt-4o-mini"
     elif client_type is LLMType.OLLAMA:
-        return 'llama3.1'
+        return "llama3.1"
     elif client_type is LLMType.CLAUDE:
-        return 'claude-3-5-sonnet-latest'
+        return "claude-3-5-sonnet-latest"
     else:
-        raise Exception('not a valid llm client type')
-    
+        raise Exception("not a valid llm client type")
+
 
 class LLMClient(ABC):
     @abc.abstractmethod
@@ -52,7 +53,7 @@ class LLMClient(ABC):
 
 class OpenAIClient(LLMClient):
     def __init__(self, model_name):
-        api_key = os.getenv('OPENAI_API_KEY')
+        api_key = os.getenv("OPENAI_API_KEY")
         self.async_client = AsyncOpenAI(api_key=api_key)
         self.client = OpenAI(api_key=api_key)
         self.model_name = model_name
@@ -62,8 +63,8 @@ class OpenAIClient(LLMClient):
             stream = await self.async_client.chat.completions.create(
                 model=self.model_name,
                 messages=[
-                    { 'role': 'system', 'content': system_prompt },
-                    { 'role': 'user', 'content': user_message }
+                    {"role": "system", "content": system_prompt},
+                    {"role": "user", "content": user_message},
                 ],
                 **prompt_options,
                 stream=True,
@@ -77,8 +78,8 @@ class OpenAIClient(LLMClient):
         resp = self.client.chat.completions.create(
             model=self.model_name,
             messages=[
-                { 'role': 'system', 'content': system_prompt },
-                { 'role': 'user', 'content': user_message }
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": user_message},
             ],
             **prompt_options,
         )
@@ -89,8 +90,8 @@ class OpenAIClient(LLMClient):
         return self.client.chat.completions.create(
             model=self.model_name,
             messages=[
-                { 'role': 'system', 'content': system_prompt },
-                { 'role': 'user', 'content': user_message }
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": user_message},
             ],
             **prompt_options,
             stream=True,
@@ -108,11 +109,11 @@ class OllamaClient(LLMClient):
             content = LLAMA_3_TEMPLATE(system=system_prompt, message=user_message)
             stream = await self.async_client.chat(
                 model=self.model_name,
-                messages=[{ 'role': 'user', 'content': content }],
+                messages=[{"role": "user", "content": content}],
                 options={
-                    'temperature': prompt_options['temperature'],
-                    'top_p': prompt_options['top_p'],
-                    'num_ctx': 8192,
+                    "temperature": prompt_options["temperature"],
+                    "top_p": prompt_options["top_p"],
+                    "num_ctx": 8192,
                 },
                 stream=True,
             )
@@ -125,32 +126,33 @@ class OllamaClient(LLMClient):
         content = LLAMA_3_TEMPLATE(system=system_prompt, message=user_message)
         resp = self.client.chat(
             model=self.model_name,
-            messages=[ { 'role': 'user', 'content': content } ],
+            messages=[{"role": "user", "content": content}],
             options={
-                'temperature': prompt_options['temperature'],
-                'top_p': prompt_options['top_p'],
-                'num_ctx': 8192,
+                "temperature": prompt_options["temperature"],
+                "top_p": prompt_options["top_p"],
+                "num_ctx": 8192,
             },
         )
-        message = resp['message']['content']
+        message = resp["message"]["content"]
         return message.strip()
-    
+
     def stream_chat(self, system_prompt, user_message, prompt_options):
         content = LLAMA_3_TEMPLATE(system=system_prompt, message=user_message)
         return self.client.chat(
             model=self.model_name,
-            messages=[ { 'role': 'user', 'content': content } ],
+            messages=[{"role": "user", "content": content}],
             options={
-                'temperature': prompt_options['temperature'],
-                'top_p': prompt_options['top_p'],
-                'num_ctx': 8192,
+                "temperature": prompt_options["temperature"],
+                "top_p": prompt_options["top_p"],
+                "num_ctx": 8192,
             },
-            stream=True
+            stream=True,
         )
+
 
 class ClaudeClient(LLMClient):
     def __init__(self, model_name, max_tokens=100_000):
-        api_key = os.getenv('ANTHROPIC_API_KEY')
+        api_key = os.getenv("ANTHROPIC_API_KEY")
         if not api_key:
             raise ValueError("ANTHROPIC_API_KEY environment variable is not set")
         self.async_client = AsyncAnthropic(api_key=api_key)
@@ -163,11 +165,9 @@ class ClaudeClient(LLMClient):
             stream = await self.async_client.messages.create(
                 model=self.model_name,
                 system=system_prompt,
-                messages=[
-                    {"role": "user", "content": user_message}
-                ],
-                max_tokens=prompt_options.get('max_tokens', self.max_tokens),
-                temperature=prompt_options.get('temperature', 0.7),
+                messages=[{"role": "user", "content": user_message}],
+                max_tokens=prompt_options.get("max_tokens", self.max_tokens),
+                temperature=prompt_options.get("temperature", 0.7),
                 stream=True,
             )
             return stream
@@ -179,11 +179,9 @@ class ClaudeClient(LLMClient):
         resp = self.client.messages.create(
             model=self.model_name,
             system=system_prompt,
-            messages=[
-                {"role": "user", "content": user_message}
-            ],
-            max_tokens=prompt_options.get('max_tokens', self.max_tokens),
-            temperature=prompt_options.get('temperature', 0.7),
+            messages=[{"role": "user", "content": user_message}],
+            max_tokens=prompt_options.get("max_tokens", self.max_tokens),
+            temperature=prompt_options.get("temperature", 0.7),
         )
         return resp.content[0].text
 
@@ -191,10 +189,8 @@ class ClaudeClient(LLMClient):
         return self.client.messages.create(
             model=self.model_name,
             system=system_prompt,
-            messages=[
-                {"role": "user", "content": user_message}
-            ],
-            max_tokens=prompt_options.get('max_tokens', self.max_tokens),
-            temperature=prompt_options.get('temperature', 0.7),
+            messages=[{"role": "user", "content": user_message}],
+            max_tokens=prompt_options.get("max_tokens", self.max_tokens),
+            temperature=prompt_options.get("temperature", 0.7),
             stream=True,
         )

@@ -9,8 +9,20 @@ from chat_client import ChatClient
 from detect import get_code_height, get_programming_language
 from github_api import BranchDiff, fetch_git_diffs
 from llm_client import LLMType, get_default_llm_model_name, string_to_enum
-from html_templates import CODE_HIGHLIGHT_HTML_CONTENT, DIFF_VIEWER_HTML_CONTENT, MERMAID_HTML_CONTENT
-from db import create_connection, create_tables, delete_review, get_all_reviews, get_review_with_files, insert_file, insert_review
+from html_templates import (
+    CODE_HIGHLIGHT_HTML_CONTENT,
+    DIFF_VIEWER_HTML_CONTENT,
+    MERMAID_HTML_CONTENT,
+)
+from db import (
+    create_connection,
+    create_tables,
+    delete_review,
+    get_all_reviews,
+    get_review_with_files,
+    insert_file,
+    insert_review,
+)
 
 
 load_dotenv()
@@ -22,6 +34,7 @@ st.set_page_config(layout="wide")
 @st.cache_data(persist="disk")
 def init_session_state():
     return {"url_input": "", "selected_review_id": None}
+
 
 # Initialize session state
 st.session_state.update(init_session_state())
@@ -50,13 +63,14 @@ def render_mermaid(mermaid_code):
     # Render the Mermaid diagram in Streamlit
     components.html(mermaid_template, height=1000)
 
+
 async def process_stream(stream, client_type, output, key):
     async for chunk in stream:
         content = ""
         if client_type == LLMType.OPENAI:
             content = chunk.choices[0].delta.content
         elif client_type == LLMType.OLLAMA:
-            content = chunk['message']['content']
+            content = chunk["message"]["content"]
         elif client_type == LLMType.CLAUDE:
             if isinstance(chunk, anthropic.types.MessageStartEvent):
                 continue  # Skip the start event
@@ -67,27 +81,35 @@ async def process_stream(stream, client_type, output, key):
                 if chunk.delta.stop_reason:
                     break  # End of message
         else:
-            raise Exception('unknown client_type')
+            raise Exception("unknown client_type")
         if content:
             st.session_state[key] += content
             output.write(st.session_state[key])
 
-async def render_diff_and_code(code, file_name, per_file_checked, prog_language, diffs, idx):
+
+async def render_diff_and_code(
+    code, file_name, per_file_checked, prog_language, diffs, idx
+):
     st.write(f"**{file_name}**")
-    if code[:4] == 'diff':
+    if code[:4] == "diff":
         tab1, tab2 = st.tabs(["✨ Diff", "📄 Code"])
         with tab1:
             display_diff_with_diff2html(code, per_file_checked)
         with tab2:
             if per_file_checked:
-                display_code_with_highlightjs(diffs.contents[idx], prog_language, per_file_checked)
+                display_code_with_highlightjs(
+                    diffs.contents[idx], prog_language, per_file_checked
+                )
             else:
                 for i, content in enumerate(diffs.contents):
                     tab2.write(f"**{diffs.file_names[i]}**")
-                    display_code_with_highlightjs(content, prog_language, per_file_checked)
+                    display_code_with_highlightjs(
+                        content, prog_language, per_file_checked
+                    )
     else:
         tab1 = st.tabs(["📄 Code"])
         display_code_with_highlightjs(code, prog_language, per_file_checked)
+
 
 async def render_response(content, key, sys_out):
     sys_out.empty()
@@ -105,6 +127,7 @@ async def render_response(content, key, sys_out):
         st.session_state[key] = content
         sys_out.write(st.session_state[key])
 
+
 async def render_sidebar(conn):
     header_container = st.sidebar.container(border=True)
     with header_container:
@@ -112,10 +135,12 @@ async def render_sidebar(conn):
         with left_side:
             left_side.write("## Reviews")
         with right_side:
-            if right_side.button(f"📝", key="new_review", type="primary", use_container_width=True):
-                st.session_state['selected_review_id'] = None
+            if right_side.button(
+                "📝", key="new_review", type="primary", use_container_width=True
+            ):
+                st.session_state["selected_review_id"] = None
 
-    for review in st.session_state['reviews']:
+    for review in st.session_state["reviews"]:
         if review[4]:
             title = f"{review[4][:30]}"
         else:
@@ -124,23 +149,37 @@ async def render_sidebar(conn):
         with sidebar_container:
             col1, col2 = st.columns([9, 1], gap="small")
             with col1:
-                review_button_clicked = col1.button(f"{title}: {review[1]}", key=f"review-{review[0]}")
+                review_button_clicked = col1.button(
+                    f"{title}: {review[1]}", key=f"review-{review[0]}"
+                )
                 if review_button_clicked:
-                    st.session_state['selected_review_id'] = review[0]
+                    st.session_state["selected_review_id"] = review[0]
             with col2:
-                review_options_clicked = col2.button(f"x", key=f"review-options-{review[0]}")
+                review_options_clicked = col2.button(
+                    "x", key=f"review-options-{review[0]}"
+                )
                 if review_options_clicked:
                     delete_review(conn, review[0])
                     st.rerun()  # Ensure the UI is refreshed
+
 
 async def render_create_review_page(conn):
     url_input = st.text_input("Github Url:", st.session_state["url_input"])
     # Save the value to session state
     st.session_state["url_input"] = url_input
 
-    prompt_template_options = ["code-review", "code-summary", "code-debate", 
-                            "code-smells", "code-refactor", 'explain-lines',
-                            'doc-strings', 'doc-markdown', 'unit-test', None]
+    prompt_template_options = [
+        "code-review",
+        "code-summary",
+        "code-debate",
+        "code-smells",
+        "code-refactor",
+        "explain-lines",
+        "doc-strings",
+        "doc-markdown",
+        "unit-test",
+        None,
+    ]
     prompt_template_selected = st.selectbox("Prompt template:", prompt_template_options)
     prompt_input = st.text_area("Prompt: (Optional)", None)
 
@@ -151,50 +190,71 @@ async def render_create_review_page(conn):
 
     button_clicked = st.button("Get Response", type="primary")
 
-    client_type = string_to_enum(LLMType, os.getenv('DEFAULT_LLM_CLIENT', "openai"))
-    model_name = os.getenv('DEFAULT_LLM_MODEL', get_default_llm_model_name(client_type))
+    client_type = string_to_enum(LLMType, os.getenv("DEFAULT_LLM_CLIENT", "openai"))
+    model_name = os.getenv("DEFAULT_LLM_MODEL", get_default_llm_model_name(client_type))
     chat = ChatClient(client_type, model_name)
 
     if button_clicked:
-        fetchingholder = st.empty().text('Fetching...')
+        fetchingholder = st.empty().text("Fetching...")
         diffs = fetch_git_diffs(url_input, ignore_tests=ignore_tests_checked)
         # save review
-        review_id = insert_review(conn, diffs.repo_name, url_input, prompt_template_selected, prompt_input)
+        review_id = insert_review(
+            conn, diffs.repo_name, url_input, prompt_template_selected, prompt_input
+        )
         fetchingholder.empty()
         patches = diffs.patches if per_file_checked else ["\n".join(diffs.patches)]
         joined_filenames = " ".join(diffs.file_names)
         for idx, patch in enumerate(patches):
             file_name = diffs.file_names[idx] if per_file_checked else joined_filenames
-            prog_language = get_programming_language("." +  diffs.file_names[idx].split(".")[-1])
+            prog_language = get_programming_language(
+                "." + diffs.file_names[idx].split(".")[-1]
+            )
             col1, col2 = st.columns([2, 2])
             code = diffs.contents[idx] if whole_file_checked else patch
             with col1:
-                await render_diff_and_code(code, file_name, per_file_checked, prog_language, diffs, idx)
+                await render_diff_and_code(
+                    code, file_name, per_file_checked, prog_language, diffs, idx
+                )
             with col2:
                 st.write(f"**{file_name}**")
                 sys_out = col2.empty()
                 key = f"ai_comment_{idx}"
                 st.session_state[key] = ""
                 if per_file_checked:
-                    fpatch = diffs.contents[idx] if whole_file_checked else diffs.patches[idx]
+                    fpatch = (
+                        diffs.contents[idx]
+                        if whole_file_checked
+                        else diffs.patches[idx]
+                    )
                 else:
-                    fpatch = " ".join(diffs.contents) if whole_file_checked else " ".join(diffs.patches)
-                prompts = chat.prepare_prompts(prompt_input, prompt_template_selected, fpatch)
+                    fpatch = (
+                        " ".join(diffs.contents)
+                        if whole_file_checked
+                        else " ".join(diffs.patches)
+                    )
+                prompts = chat.prepare_prompts(
+                    prompt_input, prompt_template_selected, fpatch
+                )
                 if stream_checked:
                     stream = await chat.async_chat_response(prompts)
                     await process_stream(stream, client_type, sys_out, key)
                     response = st.session_state[key]
-                    insert_file(conn, review_id, file_name, patch, diffs.contents[idx], response)
+                    insert_file(
+                        conn, review_id, file_name, patch, diffs.contents[idx], response
+                    )
                     await render_response(response, key, sys_out)
                 else:
-                    placeholder = col2.empty().text('Processing...')
+                    placeholder = col2.empty().text("Processing...")
                     response = chat.chat_response(prompts)
-                    insert_file(conn, review_id, file_name, patch, diffs.contents[idx], response)
+                    insert_file(
+                        conn, review_id, file_name, patch, diffs.contents[idx], response
+                    )
                     placeholder.empty()
                     await render_response(response, key, sys_out)
 
+
 async def render_view_review_page(conn):
-    review, files = get_review_with_files(conn, st.session_state['selected_review_id'])
+    review, files = get_review_with_files(conn, st.session_state["selected_review_id"])
     whole_file_checked = False
     per_file_checked = True
     if review:
@@ -213,11 +273,15 @@ async def render_view_review_page(conn):
     joined_filenames = " ".join(diffs.file_names)
     for idx, patch in enumerate(patches):
         file_name = diffs.file_names[idx] if per_file_checked else joined_filenames
-        prog_language = get_programming_language("." +  diffs.file_names[idx].split(".")[-1])
+        prog_language = get_programming_language(
+            "." + diffs.file_names[idx].split(".")[-1]
+        )
         col1, col2 = st.columns([2, 2])
         code = diffs.contents[idx] if whole_file_checked else patch
         with col1:
-            await render_diff_and_code(code, file_name, per_file_checked, prog_language, diffs, idx)
+            await render_diff_and_code(
+                code, file_name, per_file_checked, prog_language, diffs, idx
+            )
         with col2:
             st.write(f"**{file_name}**")
             sys_out = col2.empty()
@@ -226,10 +290,11 @@ async def render_view_review_page(conn):
                 st.session_state[key] = ""
             content = responses[idx]
             await render_response(content, key, sys_out)
-            
+
 
 async def main():
-    st.markdown("""
+    st.markdown(
+        """
         <style>
             .stDeployButton {display:none;}
             /* Reduce the width of the sidebar */
@@ -237,40 +302,41 @@ async def main():
                 width: 200px !important; # Set the width to your desired value
             }
         </style>
-    """, unsafe_allow_html=True)
+    """,
+        unsafe_allow_html=True,
+    )
 
     # Create a connection to the SQLite database
     database = "bin/code_reviews.db"
     conn = create_connection(database)
     if conn is None:
         st.error("Error! Cannot create the database connection.")
-    
 
     # Initialize session state flag if it doesn't exist
-    if 'has_run' not in st.session_state:
+    if "has_run" not in st.session_state:
         # print('has_run not in state, setting to False')
-        st.session_state['has_run'] = False
+        st.session_state["has_run"] = False
 
     # Check the flag and run the function if it hasn't run yet
-    if not st.session_state['has_run']:
+    if not st.session_state["has_run"]:
         # print('has_run is False, running function')
         create_tables(conn)
-        st.session_state['has_run'] = True
+        st.session_state["has_run"] = True
     else:
-        print('has_run is True, function will not run')
+        print("has_run is True, function will not run")
 
     # Initialize selected review ID and reviews list
-    if 'selected_review_id' not in st.session_state:
-        st.session_state['selected_review_id'] = None
+    if "selected_review_id" not in st.session_state:
+        st.session_state["selected_review_id"] = None
 
-    st.session_state['reviews'] = get_all_reviews(conn)
+    st.session_state["reviews"] = get_all_reviews(conn)
 
     await render_sidebar(conn)  # Render the sidebar with the updated reviews
 
-    if not st.session_state['selected_review_id']:
+    if not st.session_state["selected_review_id"]:
         await render_create_review_page(conn)  # Render the create review page
 
-    if st.session_state['selected_review_id']:
+    if st.session_state["selected_review_id"]:
         await render_view_review_page(conn)  # Render the view review page
 
     # Close the database connection
