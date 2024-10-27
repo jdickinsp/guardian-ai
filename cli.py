@@ -15,6 +15,20 @@ async def process_stream(stream, output, client_type):
             content = chunk.choices[0].delta.content
         elif client_type is LLMType.OLLAMA:
             content = chunk['message']['content']
+        elif client_type is LLMType.CLAUDE:
+            if hasattr(chunk, 'type'):
+                if chunk.type == 'message_start':
+                    continue
+                elif chunk.type == 'content_block_start':
+                    content = ''
+                elif chunk.type == 'content_block_delta':
+                    content = chunk.delta.text if hasattr(chunk.delta, 'text') else ''
+                elif chunk.type == 'message_delta':
+                    if hasattr(chunk.delta, 'stop_reason') and chunk.delta.stop_reason:
+                        break
+                    content = ''
+                else:
+                    content = ''
         else:
             raise Exception('unkown client_type')
         if content:

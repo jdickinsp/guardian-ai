@@ -4,6 +4,7 @@ import re
 from collections import namedtuple
 from enum import Enum
 from typing import List, Union, Dict, Optional
+from urllib.parse import urlparse, urlunparse
 
 from github import Github, Auth
 from github.Repository import Repository
@@ -53,7 +54,10 @@ class GitHubAPI:
 
 class GitHubURLIdentifier:
     @staticmethod
-    def identify_github_url_type(url: str, github_api: GitHubAPI) -> GitHubURLType:
+    def identify_github_url_type(github_api: GitHubAPI,url: str) -> GitHubURLType:
+        # Remove query parameters and anchors
+        parsed_url = urlparse(url)
+        clean_url = urlunparse((parsed_url.scheme, parsed_url.netloc, parsed_url.path, '', '', ''))
         patterns = {
             GitHubURLType.PULL_REQUEST_COMMIT: r"https://github\.com/([^/]+)/([^/]+)/pull/\d+/commits/[0-9a-f]{40}",
             GitHubURLType.PULL_REQUEST: r"https://github\.com/([^/]+)/([^/]+)/pull/\d+(/[^/]+)?",
@@ -63,7 +67,7 @@ class GitHubURLIdentifier:
         }
         
         for url_type, pattern in patterns.items():
-            match = re.match(pattern, url)
+            match = re.match(pattern, clean_url)
             if match:
                 if url_type == GitHubURLType.BRANCH_OR_FOLDER:
                     owner, repo, branch_or_path = match.groups()[:3]
@@ -164,6 +168,8 @@ class GitHubRepoHelper:
                     elif url_type == GitHubURLType.FILE_PATH:
                         file_path = branch_or_path.replace(branch_name, '')
                     break
+        elif url_type == GitHubURLType.COMMIT or url_type == GitHubURLType.PULL_REQUEST or url_type == GitHubURLType.PULL_REQUEST_COMMIT:
+            pass
         else:
             raise ValueError("Invalid GitHub URL")
 
@@ -324,7 +330,7 @@ def fetch_git_diffs(url: str, ignore_tests: bool = False) -> Union[PullRequestDi
         raise ValueError("GitHub token not found. Please set the GITHUB_ACCESS_TOKEN environment variable.")
     
     github_api = GitHubAPI(github_token)
-    url_type = GitHubURLIdentifier.identify_github_url_type(url, github_api)
+    url_type = GitHubURLIdentifier.identify_github_url_type(github_api, url)
     if url_type == GitHubURLType.UNKNOWN:
         raise ValueError("Invalid GitHub URL")
 

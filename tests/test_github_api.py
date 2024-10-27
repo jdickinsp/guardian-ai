@@ -32,6 +32,7 @@ def test_identify_github_url_type(mock_github_api):
         ("https://github.com/owner/repo/blob/branch/file.py", GitHubURLType.FILE_PATH),
         ("https://github.com/owner/repo/blob/branch/folder/file.py", GitHubURLType.FILE_PATH),
         ("https://github.com/owner/repo/commit/abcdef1234567890abcdef1234567890abcdef12", GitHubURLType.COMMIT),
+        ("https://github.com/karpathy/llm.c/commit/8cf66fbb845665dabacba992e8a92631132a58d8", GitHubURLType.COMMIT),
         ("https://github.com", GitHubURLType.UNKNOWN),
         ("https://github.com/owner/repo", GitHubURLType.UNKNOWN),
     ]
@@ -41,7 +42,7 @@ def test_identify_github_url_type(mock_github_api):
 
 
     for url, expected_type in cases:
-        assert GitHubURLIdentifier.identify_github_url_type(url, mock_github_api) == expected_type, f"Failed for URL: {url}"
+        assert GitHubURLIdentifier.identify_github_url_type(mock_github_api, url) == expected_type, f"Failed for URL: {url}"
 
 def test_extract_repo_and_pr_number():
     url = "https://github.com/owner/repo/pull/123"
@@ -290,12 +291,12 @@ def test_get_github_branch_diff_not_found(github_diff_fetcher, mock_repo):
         github_diff_fetcher.get_github_branch_diff('owner/repo', 'feature')
 
 def test_identify_github_url_type_with_query_params():
-    assert GitHubURLIdentifier.identify_github_url_type("https://github.com/owner/repo/pull/123?diff=split", mock_github_api) == GitHubURLType.PULL_REQUEST
-    assert GitHubURLIdentifier.identify_github_url_type("https://github.com/owner/repo/commit/1234567890abcdef1234567890abcdef12345678?diff=split", mock_github_api) == GitHubURLType.COMMIT
+    assert GitHubURLIdentifier.identify_github_url_type(mock_github_api, "https://github.com/owner/repo/pull/123?diff=split") == GitHubURLType.PULL_REQUEST
+    assert GitHubURLIdentifier.identify_github_url_type(mock_github_api, "https://github.com/owner/repo/commit/1234567890abcdef1234567890abcdef12345678?diff=split") == GitHubURLType.COMMIT
 
 def test_identify_github_url_type_with_anchor():
-    assert GitHubURLIdentifier.identify_github_url_type("https://github.com/owner/repo/pull/123#discussion_r1234567890", mock_github_api) == GitHubURLType.PULL_REQUEST
-    assert GitHubURLIdentifier.identify_github_url_type("https://github.com/owner/repo/commit/1234567890abcdef1234567890abcdef12345678#diff-1234567890abcdef1234567890abcdef12345678", mock_github_api) == GitHubURLType.COMMIT
+    assert GitHubURLIdentifier.identify_github_url_type(mock_github_api, "https://github.com/owner/repo/pull/123#discussion_r1234567890") == GitHubURLType.PULL_REQUEST
+    assert GitHubURLIdentifier.identify_github_url_type(mock_github_api, "https://github.com/owner/repo/commit/1234567890abcdef1234567890abcdef12345678#diff-1234567890abcdef1234567890abcdef12345678") == GitHubURLType.COMMIT
 
 def test_extract_repo_and_pr_number_with_query_params():
     result = GitHubURLIdentifier.extract_repo_and_pr_number("https://github.com/owner/repo/pull/123?diff=split")
@@ -340,7 +341,7 @@ def test_fetch_git_diffs_pull_request(mock_getenv, mock_identify_url_type, mock_
     assert result.patches == ['patch1']
     assert result.contents == ['content1']
 
-    mock_identify_url_type.assert_called_once_with("https://github.com/owner/repo/pull/123", ANY)
+    mock_identify_url_type.assert_called_once_with(ANY, "https://github.com/owner/repo/pull/123" )
     mock_get_github_info.assert_called_once_with("https://github.com/owner/repo/pull/123", ANY, GitHubURLType.PULL_REQUEST)
     mock_fetcher_instance.get_github_pr_diff.assert_called_once_with(123, 'owner/repo', ignore_tests=False)
 
