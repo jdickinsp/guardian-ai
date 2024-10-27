@@ -1,6 +1,5 @@
 from dataclasses import dataclass
 from code_prompts import DEFAULT_PROMPT_OPTIONS, CODE_PROMPTS, SYSTEM_PROMPT_DIFF_ENDING, SYSTEM_PROMPT_CODE_ENDING
-from github_api import fetch_git_diffs
 from llm_client import ClaudeClient, LLMType, OllamaClient, OpenAIClient
 
 @dataclass

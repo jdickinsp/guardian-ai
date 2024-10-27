@@ -3,7 +3,7 @@ import os
 import re
 from collections import namedtuple
 from enum import Enum
-from typing import Union, Dict, Optional
+from typing import List, Union, Dict, Optional
 
 from github import Github, Auth
 from github.Repository import Repository
@@ -17,82 +17,94 @@ PullRequestDiff = namedtuple("PullRequest", ["repo_name", "pr_number", "title", 
 
 
 class GitHubURLType(Enum):
-    PULL_REQUEST = "Pull Request"
-    BRANCH = "Branch"
-    COMMIT = "Commit"
-    PULL_REQUEST_COMMIT = "Pull Request Commit"
-    FILE_PATH = "File Path"
-    FOLDER_PATH = "Folder Path"
-    UNKNOWN = "Unknown"
+    BRANCH = 'Branch'
+    FOLDER_PATH = 'Folder Path'
+    PULL_REQUEST = 'Pull Request'
+    PULL_REQUEST_COMMIT = 'Pull Request Commit'
+    FILE_PATH = 'File Path'
+    COMMIT = 'Commit'
+    BRANCH_OR_FOLDER = 'Branch or Folder'
+    UNKNOWN = 'Unknown'
+
+
+class GitHubAPI:
+    def __init__(self, github_token: str):
+        if not github_token:
+            raise ValueError("GitHub token not provided")
+        self.github = Github(auth=Auth.Token(github_token))
+
+    def get_repo(self, repo_name: str) -> Repository:
+        return self.github.get_repo(repo_name)
+
+    def get_branches(self, repo_name: str) -> List[str]:
+        try:
+            repo = self.get_repo(repo_name)
+            return [branch.name for branch in repo.get_branches()]
+        except Exception as e:
+            print(f"Error fetching branches for {repo_name}: {str(e)}")
+            return []
+
+    def is_branch(self, repo_name: str, branch_or_path: str, exact_match: bool = False) -> bool:
+        branches = self.get_branches(repo_name)
+        if exact_match:
+            return branch_or_path in branches
+        return branch_or_path.split('/')[0] in branches
 
 
 class GitHubURLIdentifier:
     @staticmethod
-    def identify_github_url_type(url: str) -> GitHubURLType:
-        """
-        Identifies the type of GitHub URL (Pull Request, Branch, or Commit).
-        """
-        pr_pattern = r"https://github\.com/[^/]+/[^/]+/pull/\d+(/[^/]+)?"
-        commit_pattern = r"https://github\.com/[^/]+/[^/]+/commit/[0-9a-f]{40}"
-        branch_pattern = r'^https:\/\/github\.com\/[^\/]+\/[^\/]+\/tree\/[^\/]+\/[^\/]+$'
-        pr_commit_pattern = r"https://github\.com/[^/]+/[^/]+/pull/\d+/commits/[0-9a-f]{40}"
-        folder_pattern = r'^https:\/\/github\.com\/[^\/]+\/[^\/]+\/tree\/[^\/]+\/[^\/]+\/.+$'
-        file_pattern = r'^https:\/\/github\.com\/[^\/]+\/[^\/]+\/blob\/[^\/]+\/.+$'
-
-        if re.match(branch_pattern, url):
-            return GitHubURLType.BRANCH
-        elif re.match(folder_pattern, url):
-            return GitHubURLType.FOLDER_PATH
-        if re.match(pr_commit_pattern, url):
-            return GitHubURLType.PULL_REQUEST_COMMIT
-        elif re.match(pr_pattern, url):
-            return GitHubURLType.PULL_REQUEST
-        elif re.match(file_pattern, url):
-            return GitHubURLType.FILE_PATH
-        elif re.match(commit_pattern, url):
-            return GitHubURLType.COMMIT
-        else:
-            return GitHubURLType.UNKNOWN
+    def identify_github_url_type(url: str, github_api: GitHubAPI) -> GitHubURLType:
+        patterns = {
+            GitHubURLType.PULL_REQUEST_COMMIT: r"https://github\.com/([^/]+)/([^/]+)/pull/\d+/commits/[0-9a-f]{40}",
+            GitHubURLType.PULL_REQUEST: r"https://github\.com/([^/]+)/([^/]+)/pull/\d+(/[^/]+)?",
+            GitHubURLType.COMMIT: r"https://github\.com/([^/]+)/([^/]+)/commit/[0-9a-f]{40}",
+            GitHubURLType.FILE_PATH: r'^https://github\.com/([^/]+)/([^/]+)/blob/([^/]+)/.+$',
+            GitHubURLType.BRANCH_OR_FOLDER: r'^https://github\.com/([^/]+)/([^/]+)/tree/(.+)$',
+        }
+        
+        for url_type, pattern in patterns.items():
+            match = re.match(pattern, url)
+            if match:
+                if url_type == GitHubURLType.BRANCH_OR_FOLDER:
+                    owner, repo, branch_or_path = match.groups()[:3]
+                    repo_name = f"{owner}/{repo}"
+                    if github_api.is_branch(repo_name, branch_or_path, exact_match=True):
+                        return GitHubURLType.BRANCH
+                    else:
+                        return GitHubURLType.FOLDER_PATH
+                return url_type
+        return GitHubURLType.UNKNOWN
 
     @staticmethod
     def extract_repo_and_pr_number(url: str) -> Optional[Dict[str, Union[int, str]]]:
         pattern = r"https://github.com/([^/]+)/([^/]+)/pull/(\d+)"
         match = re.match(pattern, url)
         if match:
-            owner = match.group(1)
-            repo_name = match.group(2)
-            pr_number = match.group(3)
-            return {"pr_number": int(pr_number, 10), "repo_name": f"{owner}/{repo_name}"}
-        else:
-            print("Warning: The URL format is not correct.")
-            return None
+            owner, repo_name, pr_number = match.groups()
+            return {"pr_number": int(pr_number), "repo_name": f"{owner}/{repo_name}"}
+        return None
 
     @staticmethod
     def extract_repo_and_commit_hash(url: str) -> Optional[Dict[str, str]]:
-        pattern = r"https://github\.com/([^/]+)/([^/]+)/commit/([0-9a-f]{40})"
+        pattern = r"https://github\.com/([^/]+)/([^/]+)/commit/([0-9a-f]{7,40})"
         match = re.search(pattern, url)
         if match:
-            owner = match.group(1)
-            repo_name = match.group(2)
-            commit_hash = match.group(3)
+            owner, repo_name, commit_hash = match.groups()
             return {"repo_name": f"{owner}/{repo_name}", "commit_hash": commit_hash}
-        else:
-            print("Warning: The URL format is not correct.")
-            return None
+        return None
 
     @staticmethod
     def get_commit_hash_from_url(url: str) -> Optional[Dict[str, Union[str, int]]]:
         pattern = r"https://github.com/([^/]+)/([^/]+)/pull/(\d+)/commits/([a-f0-9]+)"
         match = re.search(pattern, url)
         if match:
-            owner = match.group(1)
-            repo_name = match.group(2)
-            pr_number = match.group(3)
-            commit_hash = match.group(4)
-            return {"repo_name": f"{owner}/{repo_name}", "pr_number": pr_number, "commit_hash": commit_hash}
-        else:
-            print("Warning: The URL format is not correct.")
-            return None
+            owner, repo_name, pr_number, commit_hash = match.groups()
+            return {
+                "repo_name": f"{owner}/{repo_name}",
+                "pr_number": pr_number,  # Return as string to match the test expectation
+                "commit_hash": commit_hash
+            }
+        return None
 
 
 class GitHubRepoHelper:
@@ -106,62 +118,64 @@ class GitHubRepoHelper:
         )
 
     @staticmethod
-    def get_github_info_from_url(url: str, url_type: Optional[GitHubURLType] = None) -> Dict[str, Optional[str]]:
-        is_folder = False
-        is_file = False
-        try:
-            url_parts = [part for part in url.split('/') if part]
-            owner = url_parts[2]
-            repo = url_parts[3]
-            ref_index = 0
-            if 'tree' in url_parts:
-                is_folder = True
-                ref_index = url_parts.index('tree')
-            elif 'blob' in url_parts:
-                is_file = True 
-                ref_index = url_parts.index('blob')
-            path_parts = url_parts[ref_index + 1:]
-        except (IndexError, ValueError):
+    def get_github_info_from_url(url: str, github_api: GitHubAPI, url_type: Optional[GitHubURLType] = None) -> Dict[str, Optional[str]]:
+        url_parts = [part for part in url.split('/') if part]
+        if len(url_parts) < 5:
             raise ValueError("Invalid GitHub URL")
 
-        g = Github(auth=Auth.Token(os.getenv("GITHUB_ACCESS_TOKEN")))
-        repository = g.get_repo(f"{owner}/{repo}")
+        owner, repo = url_parts[2:4]
+        
+        if url_type == GitHubURLType.PULL_REQUEST:
+            pr_number = url_parts[4]
+            return {
+                "owner": owner,
+                "repo": repo,
+                "repo_name": f"{owner}/{repo}",
+                "pr_number": pr_number,
+                "url_type": url_type
+            }
+        
+        is_tree = 'tree' in url_parts
+        is_blob = 'blob' in url_parts
+        is_commit = 'commit' in url_parts
+        
+        if is_tree:
+            ref_index = url_parts.index('tree')
+        elif is_blob:
+            ref_index = url_parts.index('blob')
+        elif is_commit:
+            ref_index = url_parts.index('commit')
+        else:
+            raise ValueError("Invalid GitHub URL: missing 'tree', 'blob', or 'commit'")
 
-        # Validate branch exists
-        branches = repository.get_branches()
-        branch_names = [branch.name for branch in branches]
-
-        branch_name = None
-        for i in range(0, len(path_parts) + 1):
-            potential_branch = '/'.join(path_parts[:i])
-            if potential_branch in branch_names:
-                branch_name = potential_branch
-                break
-
-        # Determine the folder path and file path
-        src_path = None
-        if branch_name:
-            src_path = '/'.join(path_parts[len(branch_name.split('/')):])
+        branch = None
+        path = None
+        file_path = None
+        branch_or_path = '/'.join(url_parts[ref_index + 1:])
+        if url_type == GitHubURLType.BRANCH:
+            branch = branch_or_path
+        elif url_type == GitHubURLType.FOLDER_PATH or url_type == GitHubURLType.FILE_PATH:
+            branches = github_api.get_branches(f"{owner}/{repo}")
+            for branch_name in branches:
+                if branch_name in branch_or_path:
+                    branch = branch_name
+                    if url_type == GitHubURLType.FOLDER_PATH:
+                        path = branch_or_path.replace(branch_name, '')
+                    elif url_type == GitHubURLType.FILE_PATH:
+                        file_path = branch_or_path.replace(branch_name, '')
+                    break
+        else:
+            raise ValueError("Invalid GitHub URL")
 
         return {
             "owner": owner,
             "repo": repo,
             "repo_name": f"{owner}/{repo}",
-            "branch": branch_name,
-            "folder_path": src_path if is_folder is True else None,
-            "file_path": src_path if is_file is True else None,
+            "branch": branch,
+            "path": path,
+            "file_path": file_path,
             "url_type": url_type
         }
-
-
-class GitHubAPI:
-    def __init__(self, github_token: str):
-        if not github_token:
-            raise ValueError("GitHub token not provided")
-        self.github = Github(auth=Auth.Token(github_token))
-
-    def get_repo(self, repo_name: str) -> Repository:
-        return self.github.get_repo(repo_name)
 
 
 class GitHubDiffFetcher:
@@ -213,7 +227,6 @@ class GitHubDiffFetcher:
         repo = self.github_api.get_repo(repo_name)
         if base_branch is None:
             base_branch = repo.default_branch
-
         comparison = repo.compare(base_branch, compare_branch)
         processed_files = [self.process_file(repo, file, compare_branch, ignore_tests) for file in comparison.files]
         processed_files = [f for f in processed_files if f]
@@ -280,15 +293,13 @@ class GitHubDiffFetcher:
         return BranchDiff(repo_name, base_branch, branch, filenames, patches, contents)
 
     def get_github_folder_contents(self, url_info: Dict[str, str], ignore_tests: bool = False) -> BranchDiff:
-        owner = url_info["owner"]
-        repo = url_info["repo"]
         repo_name = url_info["repo_name"]
-        branch = url_info["branch"]
-        folder_path = url_info["folder_path"]
+        branch = url_info['branch']
+        folder_path = url_info["path"]
 
-        repository = self.github_api.get_repo(f"{owner}/{repo}")
-        base_branch = repository.default_branch
-        contents = repository.get_contents(folder_path, ref=branch)
+        repo = self.github_api.get_repo(repo_name)
+        base_branch = repo.default_branch
+        contents = repo.get_contents(folder_path, ref=branch)
 
         file_contents = []
         filenames = []
@@ -299,7 +310,7 @@ class GitHubDiffFetcher:
             if ignore_tests and is_test_file(content_file.path):
                 continue
             if content_file.type == 'file':
-                file_data = repository.get_contents(content_file.path, ref=branch)
+                file_data = repo.get_contents(content_file.path, ref=branch)
                 content = base64.b64decode(file_data.content).decode('utf-8')
                 file_contents.append(content)
                 filenames.append(content_file.path)
@@ -307,28 +318,41 @@ class GitHubDiffFetcher:
         return BranchDiff(repo_name, base_branch, branch, filenames, file_contents, file_contents)
 
 
-def fetch_git_diffs(url: str, base_branch: Optional[str] = None, ignore_tests: bool = False) -> Union[PullRequestDiff, BranchDiff, CommitDiff, str]:
-    url_type = GitHubURLIdentifier.identify_github_url_type(url)
-    if url_type == GitHubURLType.UNKNOWN:
-        raise ValueError("Invalid GitHub URL")
-
-    github_info = GitHubRepoHelper.get_github_info_from_url(url, url_type)
+def fetch_git_diffs(url: str, ignore_tests: bool = False) -> Union[PullRequestDiff, BranchDiff, CommitDiff, str]:
     github_token = os.getenv("GITHUB_ACCESS_TOKEN")
     if not github_token:
         raise ValueError("GitHub token not found. Please set the GITHUB_ACCESS_TOKEN environment variable.")
     
     github_api = GitHubAPI(github_token)
+    url_type = GitHubURLIdentifier.identify_github_url_type(url, github_api)
+    if url_type == GitHubURLType.UNKNOWN:
+        raise ValueError("Invalid GitHub URL")
+
+    github_info = GitHubRepoHelper.get_github_info_from_url(url, github_api, url_type)
     fetcher = GitHubDiffFetcher(github_api)
 
     if url_type == GitHubURLType.PULL_REQUEST:
         pr_info = GitHubURLIdentifier.extract_repo_and_pr_number(url)
+        if not pr_info:
+            raise ValueError("Invalid Pull Request URL")
         return fetcher.get_github_pr_diff(pr_info["pr_number"], pr_info["repo_name"], ignore_tests=ignore_tests)
     elif url_type == GitHubURLType.BRANCH:
-        return fetcher.get_github_branch_diff(github_info["repo_name"], github_info["branch"], base_branch, ignore_tests=ignore_tests)
+        return fetcher.get_github_branch_diff(github_info["repo_name"], github_info["branch"], None, ignore_tests=ignore_tests)
+    elif url_type == GitHubURLType.FOLDER_PATH:
+        return fetcher.get_github_folder_contents(github_info, ignore_tests=ignore_tests)
     elif url_type == GitHubURLType.COMMIT:
         commit_info = GitHubURLIdentifier.extract_repo_and_commit_hash(url)
+        if not commit_info:
+            raise ValueError("Invalid Commit URL")
         return fetcher.get_github_commit_diff(commit_info["repo_name"], commit_info["commit_hash"], ignore_tests=ignore_tests)
     elif url_type == GitHubURLType.FILE_PATH:
         return fetcher.get_github_file_content(github_info)
-    elif url_type == GitHubURLType.FOLDER_PATH:
-        return fetcher.get_github_folder_contents(github_info, ignore_tests=ignore_tests)
+    else:
+        raise ValueError(f"Unsupported URL type: {url_type}")
+
+if __name__ == "__main__":
+    url = "https://github.com/karpathy/llm.c/tree/master/dev/eval"
+    github_token = os.getenv("GITHUB_ACCESS_TOKEN")
+    github_api = GitHubAPI(github_token)
+    url_type = GitHubURLIdentifier.identify_github_url_type(url, github_api)
+    print('url_type', url_type)
