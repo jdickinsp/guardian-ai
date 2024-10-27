@@ -44,7 +44,16 @@ st.markdown(
             background-color: #f8f9fa;
         }
         section[data-testid="stSidebar"] > div {
-            padding: 1rem;
+            padding-top: 0.5rem;  /* Reduced from 1rem */
+            padding-left: 1rem;
+            padding-right: 1rem;
+            padding-bottom: 1rem;
+        }
+        
+        /* Add specific styling for sidebar header */
+        section[data-testid="stSidebar"] h3:first-of-type {
+            margin-top: 0;
+            padding-top: 0;
         }
         
         /* Hide Streamlit branding */
@@ -53,7 +62,7 @@ st.markdown(
         
         /* Main content styling */
         .main > div {
-            padding: 1em 2em;
+            padding: 2em 2em;  /* Increased top padding from 1em to 2em */
         }
         
         /* Card-like containers */
@@ -125,7 +134,7 @@ async def render_sidebar(conn):
         st.divider()
 
         # New Review Button
-        if st.button("➕ New Review", type="primary", use_container_width=True):
+        if st.button("✨ New Review", type="primary", use_container_width=True):
             st.session_state.selected_review_id = None
             st.rerun()
 
@@ -149,8 +158,6 @@ async def render_sidebar(conn):
 
 
 async def render_create_review_page(conn):
-    st.markdown("## Create New Review")
-    
     with st.container():
         # Create a visual container with a border and background
         with st.expander("Create New Review", expanded=True):
@@ -183,7 +190,9 @@ async def render_create_review_page(conn):
                 )
 
             with col2:
-                prompt_input = st.text_area("Custom Instructions (Optional)", height=100)
+                prompt_input = st.text_area(
+                    "Custom Instructions (Optional)", height=100
+                )
 
             # Options in columns
             col1, col2 = st.columns(2)
@@ -212,7 +221,7 @@ async def render_create_review_page(conn):
                 prompt_template_selected,
                 prompt_input,
             )
-            
+
             await process_review(
                 diffs,
                 per_file_checked,
@@ -408,13 +417,17 @@ async def render_analysis(
 
     try:
         client_type = string_to_enum(LLMType, os.getenv("DEFAULT_LLM_CLIENT", "openai"))
-        model_name = os.getenv("DEFAULT_LLM_MODEL", get_default_llm_model_name(client_type))
+        model_name = os.getenv(
+            "DEFAULT_LLM_MODEL", get_default_llm_model_name(client_type)
+        )
         chat = ChatClient(client_type, model_name)
 
         fpatch = (
             diffs.contents[idx]
             if whole_file_checked
-            else (diffs.patches[idx] if isinstance(diffs.patches, list) else diffs.patches)
+            else (
+                diffs.patches[idx] if isinstance(diffs.patches, list) else diffs.patches
+            )
         )
 
         prompts = chat.prepare_prompts(prompt_input, prompt_template_selected, fpatch)
@@ -468,7 +481,7 @@ async def render_view_review_page(conn):
     # Review header
     st.markdown(
         f"""
-        # {review[1]}
+        ### {review[1]}
         **GitHub URL:** [{review[2]}]({review[2]})  
         **Template:** {review[3] or 'Custom'}  
         **Prompt:** {review[4] if review[4] else 'None'}
