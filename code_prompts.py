@@ -318,6 +318,11 @@ CODE_PROMPTS = {
         'system_prompt': DOC_MARKDOWN_PROMPT,
         'options': DOC_STRINGS_SETTINGS
     },
+     'code-debate': {
+        'type': 'review',
+        'system_prompt': CODE_DEBATE_PROMPT,
+        'options': CODE_DEBATE_SETTINGS
+    },
     'explain-lines': {
         'type': 'review',
         'system_prompt': EXPLAIN_LINES_PROMPT,
