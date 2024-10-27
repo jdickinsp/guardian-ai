@@ -5,10 +5,8 @@ from collections import namedtuple
 from enum import Enum
 from typing import Union, Dict, Optional
 
-from github import Github, Auth, GithubException
+from github import Github, Auth
 from github.Repository import Repository
-from github.PullRequest import PullRequest
-from github.Comparison import Comparison
 from github.ContentFile import ContentFile
 
 from detect import is_ignored_file, is_test_file
