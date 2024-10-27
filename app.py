@@ -58,9 +58,13 @@ st.markdown(
         
         /* Card-like containers */
         .stButton > button {
-            width: 100%;
             border-radius: 4px;
             padding: 0.5rem 1rem;
+        }
+        
+        /* Add new CSS for specific buttons */
+        .small-button > button {
+            width: auto !important;
         }
         
         /* Review items styling */
@@ -189,7 +193,14 @@ async def render_create_review_page(conn):
             ignore_tests_checked = st.checkbox("Ignore Tests", True)
 
         # Start Review button
-        if st.button("Start Review", type="primary", use_container_width=True):
+        col1, _ = st.columns([2, 3])  # Adjusted ratio for button only
+        start_review = False
+        with col1:
+            if st.button("Start Review", type="primary", use_container_width=False):
+                start_review = True
+
+        # Process review outside of any columns
+        if start_review:
             with st.spinner("Processing..."):
                 diffs = fetch_git_diffs(url_input, ignore_tests=ignore_tests_checked)
                 review_id = insert_review(
@@ -514,3 +525,4 @@ async def main():
 
 if __name__ == "__main__":
     asyncio.run(main())
+
