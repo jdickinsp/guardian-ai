@@ -8,6 +8,7 @@ def create_connection(db_file):
     try:
         conn = sqlite3.connect(db_file)
         print(f"SQLite Database created and connected to {db_file}")
+        conn.execute("PRAGMA foreign_keys = ON")
         return conn
     except Error as e:
         print(f"Error: {e}")
@@ -68,35 +69,41 @@ def create_tables(conn):
         ''')
         print("Tables 'reviews' and 'files' created successfully")
     except Error as e:
-        print(f"Error: {e}")
+        raise Error(f"Database error: {e}")
 
 def insert_review(conn, name, github_url, prompt_template, prompt):
     """ Insert a new review into the reviews table """
     try:
+        if name is None:
+            raise ValueError("Name cannot be None")
         review_id = str(uuid.uuid4())
         sql_insert_review = '''INSERT INTO reviews(id, name, github_url, prompt_template, prompt) VALUES(?,?,?,?,?)'''
         cur = conn.cursor()
         cur.execute(sql_insert_review, (review_id, name, github_url, prompt_template, prompt))
         conn.commit()
-        print("Review inserted successfully")
         return review_id
-    except Error as e:
-        print(f"Error: {e}")
-        return None
+    except sqlite3.Error as e:
+        raise sqlite3.Error(f"Database error: {e}")
+    except ValueError as e:
+        raise sqlite3.Error(f"Database error: {e}")
 
 def insert_file(conn, review_id, file_name, diff, code, response):
     """ Insert a new file into the files table """
     try:
+        c = conn.cursor()
+        # First, check if the review exists
+        c.execute("SELECT id FROM reviews WHERE id=?", (review_id,))
+        if c.fetchone() is None:
+            raise ValueError(f"Review with id {review_id} does not exist")
+        
         file_id = str(uuid.uuid4())
-        sql_insert_file = '''INSERT INTO files(id, review_id, file_name, diff, code, response) VALUES(?,?,?,?,?,?)'''
-        cur = conn.cursor()
-        cur.execute(sql_insert_file, (file_id, review_id, file_name, diff, code, response))
+        c.execute('''INSERT INTO files (id, review_id, file_name, diff, code, response)
+                     VALUES (?, ?, ?, ?, ?, ?)''',
+                  (file_id, review_id, file_name, diff, code, response))
         conn.commit()
-        print("File inserted successfully")
         return file_id
-    except Error as e:
-        print(f"Error: {e}")
-        return None
+    except sqlite3.Error as e:
+        raise sqlite3.Error(f"Database error: {e}")
 
 def delete_review(conn, review_id):
     """ Delete a review and its associated files from the database """
@@ -107,9 +114,8 @@ def delete_review(conn, review_id):
         cur.execute(sql_delete_files, (review_id,))
         cur.execute(sql_delete_review, (review_id,))
         conn.commit()
-        print("Review and associated files deleted successfully")
     except Error as e:
-        print(f"Error: {e}")
+        raise Error(f"Database error: {e}")
 
 def get_all_reviews(conn):
     """
@@ -121,8 +127,7 @@ def get_all_reviews(conn):
         rows = cur.fetchall()
         return rows
     except Error as e:
-        print(f"Error: {e}")
-        return []
+        raise Error(f"Database error: {e}")
 
 
 def get_review_with_files(conn, review_id):

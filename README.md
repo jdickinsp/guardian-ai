@@ -14,6 +14,31 @@ Environmental Variables:
 - ANTHROPIC_API_KEY: Replace <your_anthropic_api_key> with your Anthropic API key.
 - DEFAULT_LLM_CLIENT: Set to either openai, ollama or claude.
 
+## Development Setup
+
+If you're planning to contribute to Guardian AI or run tests, you'll need to set up the development environment:
+
+1. Clone the repository:
+   ```
+   git clone https://github.com/your-repo/guardian-ai.git
+   cd guardian-ai
+   ```
+
+2. Create a virtual environment (optional but recommended):
+   ```
+   python -m venv venv
+   source venv/bin/activate  # On Windows, use `venv\Scripts\activate`
+   ```
+
+3. Install the project dependencies:
+   ```
+   pip install -r requirements.txt
+   ```
+
+4. Install the development and test dependencies:
+   ```
+   pip install -r requirements-dev.txt
+   ```
 
 ## Getting Started
 
@@ -39,3 +64,29 @@ Run the webapp:
 ```
 python -m streamlit run app.py
 ```
+
+## Running Test Coverage
+
+To run test coverage for Guardian AI:
+
+1. Ensure you've completed the Development Setup steps above.
+
+2. Run the tests with coverage:
+   ```
+   python -m pytest --cov
+   ```
+
+This command will run all tests and provide a coverage report in the terminal.
+
+3. For a more detailed HTML coverage report:
+   ```
+   python -m pytest --cov --cov-report=html
+   ```
+   This will create a `htmlcov` directory with an `index.html` file that you can open in your browser to view the detailed coverage report.
+
+4. To see which lines of code are not covered by tests:
+   ```
+   python -m pytest --cov --cov-report=term-missing
+   ```
+
+Remember to regularly run and maintain your test coverage to ensure the reliability of Guardian AI.

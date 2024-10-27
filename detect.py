@@ -58,52 +58,91 @@ def get_programming_language(extension):
 
 def is_test_file(file_name):
     """
-    Check if a given file name is a test or spec file for various languages.
-    
-    Parameters:
-    file_name (str): The name of the file to check.
-    
+    Determines if a given file name corresponds to a test file.
+
+    This function uses a combination of common naming conventions and
+    language-specific patterns to identify test files across various
+    programming languages.
+
+    Args:
+        file_name (str): The name of the file to check.
+
     Returns:
-    bool: True if the file is a test or spec file, False otherwise.
+        bool: True if the file is identified as a test file, False otherwise.
+
+    The function performs the following checks:
+    1. Verifies if the file has a valid programming language extension.
+    2. Excludes files that contain test-related words but are not actual test files.
+    3. Checks for common test file indicators in the file name.
+    4. Applies special case patterns for different naming conventions.
+    5. Checks for camelCase naming conventions used in some languages.
+
+    Examples:
+        >>> is_test_file("test_example.py")
+        True
+        >>> is_test_file("example_test.js")
+        True
+        >>> is_test_file("ExampleSpec.scala")
+        True
+        >>> is_test_file("regular_file.py")
+        False
+        >>> is_test_file("testing_utils.py")
+        False
     """
-    # Common patterns for test and spec files in various languages
-    test_patterns = [
-        r'test_',       # e.g., test_example.py, test_example.js, test_example.go
-        r'_test',       # e.g., example_test.py, example_test.go
-        r'\btest\b',    # e.g., example.test.py, example.test.js, example_test.go
-        r'\btests\b',   # e.g., example.tests.py, example.tests.js
-        r'\b_test\b',   # e.g., example._test.py, example._test.js
-        r'\b_tests\b',  # e.g., example._tests.py, example._tests.js
-        r'\bspec\b',    # e.g., example.spec.js, example.spec.ts, example_spec.py
-        r'_spec',       # e.g., example_spec.py, example_spec.go
-        r'_spec_',      # e.g., example_spec_file.cpp
+    # List of common test file prefixes and suffixes
+    test_indicators = [
+        'test_', '_test', 'tests_', '_tests', 'spec_', '_spec'
     ]
     
-    # File extensions to check for each language
-    file_extensions = [
-        r'\.py$',      # Python
-        r'\.js$',      # JavaScript
-        r'\.jsx$',     # JavaScript (React)
-        r'\.ts$',      # TypeScript
-        r'\.tsx$',     # TypeScript (React)
-        r'\.go$',      # Go
-        r'\.c$',       # C
-        r'\.cpp$',     # C++
-        r'\.cc$',      # C++
-        r'\.h$',       # C/C++ Header
-        r'\.hpp$',     # C++ Header
+    # List of common programming language extensions
+    extensions = [
+        'py', 'js', 'jsx', 'ts', 'tsx', 'rb', 'java', 'cs', 
+        'go', 'rs', 'php', 'swift', 'kt', 'scala', 'cpp'
     ]
     
-    # Combine patterns and file extensions
-    test_patterns_combined = [
-        f"{pattern}{extension}" for pattern in test_patterns for extension in file_extensions
+    # Convert filename to lowercase for case-insensitive matching
+    lower_file_name = file_name.lower()
+    
+    # Check if the file has a valid extension
+    if not any(lower_file_name.endswith(f'.{ext}') for ext in extensions):
+        return False
+    
+    # Exclude files that contain 'test' but are not actual test files
+    excluded_patterns = [
+        r'.*testing.*',
+        r'.*testdata.*',
+        r'.*testutils.*',
     ]
     
-    # Compile the patterns into a single regex
-    test_regex = re.compile('|'.join(test_patterns_combined), re.IGNORECASE)
+    if any(re.match(pattern, lower_file_name) for pattern in excluded_patterns):
+        return False
     
-    # Check if the file name matches any of the test patterns
-    return bool(test_regex.search(file_name))
+    # Check for test indicators in the filename
+    for indicator in test_indicators:
+        if indicator in lower_file_name:
+            return True
+    
+    # Special cases for languages with different naming conventions
+    special_cases = [
+        r'^test.*\.',
+        r'^.*test\.',
+        r'^.*tests?\.',
+        r'^.*spec\.',
+        r'^.*specs?\.',
+    ]
+    
+    if any(re.match(pattern, lower_file_name) for pattern in special_cases):
+        return True
+    
+    # Additional check for camelCase naming in some languages
+    camel_case_patterns = [
+        r'^.*Test\.',
+        r'^.*Tests?\.',
+        r'^.*Spec\.',
+        r'^.*Specs?\.',
+    ]
+    
+    return any(re.match(pattern, file_name) for pattern in camel_case_patterns)
 
 
 def is_ignored_file(file_name):

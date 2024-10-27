@@ -284,10 +284,9 @@ DOC_STRINGS_SETTINGS = {
 
 
 CODE_PROMPTS = {
-    'code-debate': { 
-        'type': 'debate', 
-        'system_prompt': CODE_DEBATE_PROMPT, 
-        'options': CODE_DEBATE_SETTINGS 
+    "default": {
+        "system_prompt": "You are a helpful coding assistant.",
+        "options": DEFAULT_PROMPT_OPTIONS
     },
     'code-refactor': { 
         'type': 'refactor', 
@@ -318,6 +317,11 @@ CODE_PROMPTS = {
         'type': 'review',
         'system_prompt': DOC_MARKDOWN_PROMPT,
         'options': DOC_STRINGS_SETTINGS
+    },
+     'code-debate': {
+        'type': 'review',
+        'system_prompt': CODE_DEBATE_PROMPT,
+        'options': CODE_DEBATE_SETTINGS
     },
     'explain-lines': {
         'type': 'review',
