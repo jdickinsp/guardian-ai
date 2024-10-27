@@ -34,3 +34,6 @@ env/
 *.env
 bin/
 
+.pytest_cache/
+.coverage
+
