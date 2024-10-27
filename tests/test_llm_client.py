@@ -5,6 +5,7 @@ from llm_client import (
     LLMType, string_to_enum, get_default_llm_model_name,
     OpenAIClient, OllamaClient, ClaudeClient
 )
+import asyncio
 
 # Test LLMType enum and related functions
 def test_llm_type_enum():
@@ -52,7 +53,6 @@ def test_openai_client(mock_openai, mock_async_openai):
         stream = await client.async_chat('system', 'user', {})
         assert stream == mock_async_stream
 
-    import asyncio
     asyncio.run(async_test())
 
 # Test OllamaClient
@@ -79,14 +79,14 @@ def test_ollama_client(mock_ollama_client, mock_async_ollama_client):
         stream = await client.async_chat('system', 'user', {'temperature': 0.7, 'top_p': 0.9})
         assert stream == mock_async_stream
 
-    import asyncio
     asyncio.run(async_test())
 
 # Test ClaudeClient
 @patch('llm_client.AsyncAnthropic')
 @patch('llm_client.Anthropic')
 @patch.dict('os.environ', {'ANTHROPIC_API_KEY': 'test_key'})
-def test_claude_client(mock_anthropic, mock_async_anthropic):
+@pytest.mark.asyncio
+async def test_claude_client(mock_anthropic, mock_async_anthropic):
     client = ClaudeClient('claude-3')
     
     # Test chat_response
@@ -101,14 +101,15 @@ def test_claude_client(mock_anthropic, mock_async_anthropic):
     assert stream == mock_stream
 
     # Test async_chat
-    async def async_test():
-        mock_async_stream = AsyncMock()
-        mock_async_anthropic.return_value.messages.create = AsyncMock(return_value=mock_async_stream)
-        stream = await client.async_chat('system', 'user', {})
-        assert stream == mock_async_stream
+    async def mock_create(**kwargs):
+        class MockResponse:
+            content = [{"text": "Async test response"}]
+        return MockResponse()
 
-    import asyncio
-    asyncio.run(async_test())
+    mock_async_anthropic.return_value.messages.create = mock_create
+    
+    response = await client.async_chat('system', 'user', {})
+    assert response.content[0]["text"] == 'Async test response'
 
 # Test ClaudeClient initialization without API key
 def test_claude_client_no_api_key():

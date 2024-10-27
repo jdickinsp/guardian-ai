@@ -21,7 +21,6 @@ def github_diff_fetcher(mock_github_api):
     return GitHubDiffFetcher(mock_github_api)
 
 def test_identify_github_url_type(mock_github_api):
-    github_api = GitHubAPI("fake_token")  # Create a GitHubAPI instance
     cases = [
         ("https://github.com/owner/repo/tree/branch", GitHubURLType.BRANCH),
         ("https://github.com/owner/repo/tree/branch/folder", GitHubURLType.FOLDER_PATH),
@@ -395,7 +394,14 @@ def test_get_file_content(mock_diff_fetcher):
 @patch('github_api.GitHubURLIdentifier.identify_github_url_type')
 @patch('github_api.GitHubURLIdentifier.extract_repo_and_commit_hash')
 @patch('github_api.GitHubURLIdentifier.extract_repo_and_pr_number')
-def test_fetch_git_diffs(mock_extract_pr, mock_extract_commit, mock_identify_url_type, mock_get_github_info, mock_fetcher_class, mock_api_class):
+def test_fetch_git_diffs(
+    mock_extract_pr,
+    mock_extract_commit, 
+    mock_identify_url_type, 
+    mock_get_github_info, 
+    mock_fetcher_class, 
+    mock_api_class
+):
     mock_api = mock_api_class.return_value
     mock_fetcher = mock_fetcher_class.return_value
 
@@ -488,6 +494,52 @@ def test_fetch_git_diffs(mock_extract_pr, mock_extract_commit, mock_identify_url
         with pytest.raises(ValueError):
             fetch_git_diffs(pr_url)
 
+def test_fetch_git_diffs():
+    # Mock GitHubAPI
+    mock_github_api = Mock(spec=GitHubAPI)
 
+    # Mock GitHubDiffFetcher
+    mock_diff_fetcher = Mock(spec=GitHubDiffFetcher)
+    mock_diff_fetcher.get_github_pr_diff.return_value = PullRequestDiff(
+        repo_name="owner/repo",
+        pr_number=1,
+        title="Test PR",
+        body="Test PR body",
+        file_names=["test.py"],
+        patches=["test patch"],
+        contents=["test content"]
+    )
 
+    # Mock GitHubURLIdentifier
+    mock_url_identifier = Mock(spec=GitHubURLIdentifier)
+    mock_url_identifier.identify_github_url_type.return_value = GitHubURLType.PULL_REQUEST
+    mock_url_identifier.extract_repo_and_pr_number.return_value = {"repo_name": "owner/repo", "pr_number": 1}
 
+    # Mock GitHubRepoHelper
+    mock_repo_helper = Mock(spec=GitHubRepoHelper)
+    mock_repo_helper.get_github_info_from_url.return_value = {
+        "owner": "owner",
+        "repo": "repo",
+        "repo_name": "owner/repo",
+        "pr_number": "1",
+        "url_type": GitHubURLType.PULL_REQUEST
+    }
+
+    with patch('github_api.GitHubAPI', return_value=mock_github_api):
+        with patch('github_api.GitHubDiffFetcher', return_value=mock_diff_fetcher):
+            with patch('github_api.GitHubURLIdentifier', mock_url_identifier):
+                with patch('github_api.GitHubRepoHelper', mock_repo_helper):
+                    with patch('github_api.os.getenv', return_value="fake_token"):
+                        result = fetch_git_diffs("https://github.com/owner/repo/pull/1")
+
+    assert isinstance(result, PullRequestDiff)
+    assert result.repo_name == "owner/repo"
+    assert result.pr_number == 1
+    assert result.file_names == ["test.py"]
+    assert result.patches == ["test patch"]
+    assert result.contents == ["test content"]
+
+    # Ensure the mock methods were called
+    mock_url_identifier.identify_github_url_type.assert_called_once()
+    mock_repo_helper.get_github_info_from_url.assert_called_once()
+    mock_diff_fetcher.get_github_pr_diff.assert_called_once_with(1, "owner/repo", ignore_tests=False)

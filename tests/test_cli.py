@@ -100,4 +100,13 @@ async def test_cli(mock_chat_client, mock_fetch_git_diffs, mock_arg_parser, mock
     mock_load_dotenv.assert_called_once()
     mock_fetch_git_diffs.assert_called_once_with('https://github.com/user/repo/pull/1', None)
     mock_chat_instance.prepare_prompts.assert_called_once()
-    mock_chat_instance.async_chat_response.assert_called_once()
+    assert mock_chat_instance.async_chat_response.await_count == 1
+
+    # Ensure fetch_git_diffs is not making real API calls
+    mock_fetch_git_diffs.assert_called_once_with('https://github.com/user/repo/pull/1', None)
+    
+    # Verify ChatClient methods are properly mocked
+    mock_chat_instance = mock_chat_client.return_value
+    mock_chat_instance.prepare_prompts.assert_called_once()
+    assert mock_chat_instance.async_chat_response.await_count == 1
+
