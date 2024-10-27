@@ -31,22 +31,22 @@ class GitHubURLIdentifier:
         Identifies the type of GitHub URL (Pull Request, Branch, or Commit).
         """
         pr_pattern = r"https://github\.com/[^/]+/[^/]+/pull/\d+(/[^/]+)?"
-        branch_pattern = r"https://github\.com/[^/]+/[^/]+/tree/[^/]+"
         commit_pattern = r"https://github\.com/[^/]+/[^/]+/commit/[0-9a-f]{40}"
+        branch_pattern = r'^https:\/\/github\.com\/[^\/]+\/[^\/]+\/tree\/[^\/]+\/[^\/]+$'
         pr_commit_pattern = r"https://github\.com/[^/]+/[^/]+/pull/\d+/commits/[0-9a-f]{40}"
-        folder_pattern = r'^https:\/\/github\.com\/[^\/]+\/[^\/]+\/tree\/[^\/]+\/.*$'
+        folder_pattern = r'^https:\/\/github\.com\/[^\/]+\/[^\/]+\/tree\/[^\/]+\/[^\/]+\/.+$'
         file_pattern = r'^https:\/\/github\.com\/[^\/]+\/[^\/]+\/blob\/[^\/]+\/.+$'
 
-        if info['branch'] and info['folder_path'] is None and re.match(branch_pattern, url):
+        if re.match(branch_pattern, url):
             return GitHubURLType.BRANCH
+        elif re.match(folder_pattern, url):
+            return GitHubURLType.FOLDER_PATH
         if re.match(pr_commit_pattern, url):
             return GitHubURLType.PULL_REQUEST_COMMIT
         elif re.match(pr_pattern, url):
             return GitHubURLType.PULL_REQUEST
         elif re.match(file_pattern, url):
             return GitHubURLType.FILE_PATH
-        elif re.match(folder_pattern, url):
-            return GitHubURLType.FOLDER_PATH
         elif re.match(commit_pattern, url):
             return GitHubURLType.COMMIT
         else:
@@ -192,40 +192,25 @@ class GitHubDiffFetcher:
         if base_branch is None:
             base_branch = repo.default_branch
 
-        paths = []
-        files = []
         file_names = []
         contents = []
         patches = []
 
-        if base_branch != compare_branch:
-            comparison = repo.compare(base_branch, compare_branch)
-            files = comparison.files
-            paths = [f.filename for f in comparison.files]
-        else:
-            master_ref = repo.get_branch(base_branch)
-            master_sha = master_ref.commit.sha
-            master_tree = repo.get_git_tree(master_sha, recursive=True).tree
-            files = [item for item in master_tree if item.type == 'blob']
-            paths = [f.path for f in files]
-
-        for idx, path in enumerate(paths):
+        comparison = repo.compare(base_branch, compare_branch)
+        
+        for file in comparison.files:
+            if is_ignored_file(file.filename) or (ignore_tests and is_test_file(file.filename)):
+                continue
+            
             try:
-                content = repo.get_contents(path, ref=compare_branch)
-                if is_ignored_file(content.path):
-                    continue
-                if ignore_tests and is_test_file(content.path):
-                    continue
+                content = repo.get_contents(file.filename, ref=compare_branch)
                 if content.encoding == "base64":
                     file_content = content.decoded_content.decode()
                     contents.append(file_content)
-                    if base_branch != compare_branch:
-                        patches.append(GitHubRepoHelper.get_diff_header(files[idx]) + files[idx].patch)
-                    else:
-                        patches.append(file_content)
-                    file_names.append(path)
+                    patches.append(GitHubRepoHelper.get_diff_header(file) + file.patch)
+                    file_names.append(file.filename)
             except Exception as e:
-                print(f"Error retrieving content for {path}: {str(e)}")
+                print(f"Error retrieving content for {file.filename}: {str(e)}")
 
         return BranchDiff(repo_name, base_branch, compare_branch, file_names, patches, contents)
 
@@ -344,7 +329,10 @@ def fetch_git_diffs(github_url, base_branch=None, ignore_tests=True):
 
 
 if __name__ == "__main__":
-    pr_diff = fetch_git_diffs("https://github.com/karpathy/llm.c/pull/155")
-    for p in pr_diff.patches:
+    # pr_diff = fetch_git_diffs("https://github.com/karpathy/llm.c/pull/155")
+    # for p in pr_diff.patches:
+    #     print(p)
+    branch_diff = fetch_git_diffs("https://github.com/jdickinsp/guardian-ai/tree/feature/claude_api")
+    for p in branch_diff.patches:
         print(p)
     

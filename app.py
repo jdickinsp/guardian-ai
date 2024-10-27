@@ -1,5 +1,6 @@
 import asyncio
 import os
+import anthropic
 from dotenv import load_dotenv
 import streamlit as st
 import streamlit.components.v1 as components
@@ -56,6 +57,15 @@ async def process_stream(stream, client_type, output, key):
             content = chunk.choices[0].delta.content
         elif client_type == LLMType.OLLAMA:
             content = chunk['message']['content']
+        elif client_type == LLMType.CLAUDE:
+            if isinstance(chunk, anthropic.types.MessageStartEvent):
+                continue  # Skip the start event
+            elif isinstance(chunk, anthropic.types.ContentBlockDeltaEvent):
+                if chunk.delta.text:
+                    content = chunk.delta.text
+            elif isinstance(chunk, anthropic.types.MessageDeltaEvent):
+                if chunk.delta.stop_reason:
+                    break  # End of message
         else:
             raise Exception('unknown client_type')
         if content:
