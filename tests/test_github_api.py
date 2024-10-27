@@ -1,6 +1,6 @@
 import pytest
-from unittest.mock import Mock, patch, MagicMock, PropertyMock
-from github import Github, Auth, GithubException
+from unittest.mock import Mock, patch
+from github import Auth, GithubException
 from github_api import GitHubURLIdentifier, GitHubRepoHelper, GitHubDiffFetcher, fetch_git_diffs, GitHubURLType, BranchDiff, CommitDiff, PullRequestDiff
 
 @pytest.fixture
