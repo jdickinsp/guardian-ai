@@ -11,7 +11,8 @@ Before using the Guardian AI, ensure that you have the following installed:
 Environmental Variables:
 - OPENAI_API_KEY: Replace <your_openai_api_key> with your OpenAI API key.
 - GITHUB_ACCESS_TOKEN: Replace <your_github_access_token> with your GitHub access token.
-- DEFAULT_LLM_CLIENT: Set to either openai or ollama.
+- ANTHROPIC_API_KEY: Replace <your_anthropic_api_key> with your Anthropic API key.
+- DEFAULT_LLM_CLIENT: Set to either openai, ollama or claude.
 
 
 ## Getting Started
