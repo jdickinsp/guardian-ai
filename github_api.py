@@ -1,12 +1,15 @@
 import base64
-import itertools
 import os
 import re
 from collections import namedtuple
 from enum import Enum
-from typing import Union
+from typing import Union, Dict, Optional
 
 from github import Github, Auth, GithubException
+from github.Repository import Repository
+from github.PullRequest import PullRequest
+from github.Comparison import Comparison
+from github.ContentFile import ContentFile
 
 from detect import is_ignored_file, is_test_file
 
@@ -27,7 +30,7 @@ class GitHubURLType(Enum):
 
 class GitHubURLIdentifier:
     @staticmethod
-    def identify_github_url_type(url):
+    def identify_github_url_type(url: str) -> GitHubURLType:
         """
         Identifies the type of GitHub URL (Pull Request, Branch, or Commit).
         """
@@ -54,7 +57,7 @@ class GitHubURLIdentifier:
             return GitHubURLType.UNKNOWN
 
     @staticmethod
-    def extract_repo_and_pr_number(url):
+    def extract_repo_and_pr_number(url: str) -> Optional[Dict[str, Union[int, str]]]:
         pattern = r"https://github.com/([^/]+)/([^/]+)/pull/(\d+)"
         match = re.match(pattern, url)
         if match:
@@ -67,7 +70,7 @@ class GitHubURLIdentifier:
             return None
 
     @staticmethod
-    def extract_repo_and_commit_hash(url):
+    def extract_repo_and_commit_hash(url: str) -> Optional[Dict[str, str]]:
         pattern = r"https://github\.com/([^/]+)/([^/]+)/commit/([0-9a-f]{40})"
         match = re.search(pattern, url)
         if match:
@@ -80,7 +83,7 @@ class GitHubURLIdentifier:
             return None
 
     @staticmethod
-    def get_commit_hash_from_url(url):
+    def get_commit_hash_from_url(url: str) -> Optional[Dict[str, Union[str, int]]]:
         pattern = r"https://github.com/([^/]+)/([^/]+)/pull/(\d+)/commits/([a-f0-9]+)"
         match = re.search(pattern, url)
         if match:
@@ -105,7 +108,7 @@ class GitHubRepoHelper:
         )
 
     @staticmethod
-    def get_github_info_from_url(url, url_type=None):
+    def get_github_info_from_url(url: str, url_type: Optional[GitHubURLType] = None) -> Dict[str, Optional[str]]:
         is_folder = False
         is_file = False
         try:
@@ -153,114 +156,102 @@ class GitHubRepoHelper:
         }
 
 
-class GitHubDiffFetcher:
-    def __init__(self):
-        github_token = os.getenv("GITHUB_ACCESS_TOKEN")
+class GitHubAPI:
+    def __init__(self, github_token: str):
         if not github_token:
-            raise ValueError("GitHub token not found. Please set the GITHUB_ACCESS_TOKEN environment variable.")
+            raise ValueError("GitHub token not provided")
         self.github = Github(auth=Auth.Token(github_token))
 
-    def get_github_pr_diff(self, pr_number: int, repo_name: str, ignore_tests: bool =False) -> PullRequestDiff:
+    def get_repo(self, repo_name: str) -> Repository:
+        return self.github.get_repo(repo_name)
+
+
+class GitHubDiffFetcher:
+    def __init__(self, github_api: GitHubAPI):
+        self.github_api = github_api
+
+    def get_file_content(self, repo: Repository, path: str, ref: str) -> Optional[str]:
         try:
-            repo = self.github.get_repo(repo_name)
-            pr = repo.get_pull(pr_number)
+            content = repo.get_contents(path, ref=ref)
+            if content.encoding == "base64":
+                return content.decoded_content.decode()
+        except Exception as e:
+            print(f"Error retrieving content for {path}: {str(e)}")
+        return None
 
-            head_sha = pr.head.sha
-            files = list(itertools.islice(pr.get_files(), 51))
-            file_names = []
-            contents = []
-            patches = []
+    def process_file(self, repo: Repository, file: ContentFile, ref: str, ignore_tests: bool) -> Optional[Dict[str, str]]:
+        if is_ignored_file(file.filename) or (ignore_tests and is_test_file(file.filename)):
+            return None
+        
+        content = self.get_file_content(repo, file.filename, ref)
+        if content:
+            return {
+                "filename": file.filename,
+                "content": content,
+                "patch": GitHubRepoHelper.get_diff_header(file) + file.patch
+            }
+        return None
 
-            for file in files:
-                path = file.filename
-                try:
-                    content = repo.get_contents(path, ref=head_sha)
-                    if is_ignored_file(content.path):
-                        continue
-                    if ignore_tests and is_test_file(content.path):
-                        continue
-                    if content.encoding == "base64":
-                        file_content = content.decoded_content.decode()
-                        contents.append(file_content)
-                        patches.append(GitHubRepoHelper.get_diff_header(file) + file.patch)
-                        file_names.append(path)
-                except Exception as e:
-                    print(f"Error retrieving content for {path}: {str(e)}")
+    def get_github_pr_diff(self, pr_number: int, repo_name: str, ignore_tests: bool = False) -> PullRequestDiff:
+        repo = self.github_api.get_repo(repo_name)
+        pr = repo.get_pull(pr_number)
+        head_sha = pr.head.sha
+        
+        files = list(pr.get_files())[:51]  # Limit to 51 files
+        processed_files = [self.process_file(repo, file, head_sha, ignore_tests) for file in files]
+        processed_files = [f for f in processed_files if f]
 
-                return PullRequestDiff(
-                    repo_name=repo_name,
-                    pr_number=pr_number,
-                    title=pr.title,
-                    body=pr.body,
-                    file_names=file_names,
-                    patches=patches,
-                    contents=contents
-                )
-        except GithubException as e:
-            if e.status == 404:
-                raise ValueError("Pull request not found")
-            raise
+        return PullRequestDiff(
+            repo_name=repo_name,
+            pr_number=pr_number,
+            title=pr.title,
+            body=pr.body,
+            file_names=[f["filename"] for f in processed_files],
+            patches=[f["patch"] for f in processed_files],
+            contents=[f["content"] for f in processed_files]
+        )
 
-    def get_github_branch_diff(self, repo_name, compare_branch, base_branch=None, ignore_tests=False):
-        repo = self.github.get_repo(repo_name)
+    def get_github_branch_diff(self, repo_name: str, compare_branch: str, base_branch: Optional[str] = None, ignore_tests: bool = False) -> BranchDiff:
+        repo = self.github_api.get_repo(repo_name)
         if base_branch is None:
             base_branch = repo.default_branch
 
-        file_names = []
-        contents = []
-        patches = []
-
         comparison = repo.compare(base_branch, compare_branch)
-        
-        for file in comparison.files:
-            if is_ignored_file(file.filename) or (ignore_tests and is_test_file(file.filename)):
-                continue
-            
-            try:
-                content = repo.get_contents(file.filename, ref=compare_branch)
-                if content.encoding == "base64":
-                    file_content = content.decoded_content.decode()
-                    contents.append(file_content)
-                    patches.append(GitHubRepoHelper.get_diff_header(file) + file.patch)
-                    file_names.append(file.filename)
-            except Exception as e:
-                print(f"Error retrieving content for {file.filename}: {str(e)}")
+        processed_files = [self.process_file(repo, file, compare_branch, ignore_tests) for file in comparison.files]
+        processed_files = [f for f in processed_files if f]
 
-        return BranchDiff(repo_name, base_branch, compare_branch, file_names, patches, contents)
+        return BranchDiff(
+            repo_name=repo_name,
+            base_branch=base_branch,
+            compare_branch=compare_branch,
+            file_names=[f["filename"] for f in processed_files],
+            patches=[f["patch"] for f in processed_files],
+            contents=[f["content"] for f in processed_files]
+        )
 
-    def get_github_commit_diff(self, repo_name, commit_hash, ignore_tests=False):
-        repo = self.github.get_repo(repo_name)
+    def get_github_commit_diff(self, repo_name: str, commit_hash: str, ignore_tests: bool = False) -> CommitDiff:
+        repo = self.github_api.get_repo(repo_name)
         commit = repo.get_commit(sha=commit_hash)
-        file_names = []
-        contents = []
-        patches = []
+        
+        processed_files = [self.process_file(repo, file, commit_hash, ignore_tests) for file in commit.files]
+        processed_files = [f for f in processed_files if f]
 
-        for file in commit.files:
-            path = file.filename
-            try:
-                content = repo.get_contents(path, ref=commit_hash)
-                if is_ignored_file(content.path):
-                    continue
-                if ignore_tests and is_test_file(content.path):
-                    continue
-                if content.encoding == "base64":
-                    file_content = content.decoded_content.decode()
-                    contents.append(file_content)
-                    patches.append(GitHubRepoHelper.get_diff_header(file) + file.patch)
-                    file_names.append(path)
-            except Exception as e:
-                print(f"Error retrieving content for {path}: {str(e)}")
+        return CommitDiff(
+            repo_name=repo_name,
+            commit_hash=commit_hash,
+            file_names=[f["filename"] for f in processed_files],
+            patches=[f["patch"] for f in processed_files],
+            contents=[f["content"] for f in processed_files]
+        )
 
-        return CommitDiff(repo_name, commit_hash, file_names, patches, contents)
-
-    def get_github_file_content(self, url_info):
+    def get_github_file_content(self, url_info: Dict[str, str]) -> BranchDiff:
         owner = url_info["owner"]
         repo = url_info["repo"]
         repo_name = url_info["repo_name"]
         branch = url_info["branch"]
         file_path = url_info["file_path"]
 
-        repo = self.github.get_repo(f"{owner}/{repo}")
+        repo = self.github_api.get_repo(f"{owner}/{repo}")
         base_branch = repo.default_branch
         if base_branch == branch:
             file_content = repo.get_contents(file_path, ref=branch)
@@ -290,14 +281,14 @@ class GitHubDiffFetcher:
             print(f"Error retrieving content for {path}: {str(e)}")
         return BranchDiff(repo_name, base_branch, branch, filenames, patches, contents)
 
-    def get_github_folder_contents(self, url_info, ignore_tests=False):
+    def get_github_folder_contents(self, url_info: Dict[str, str], ignore_tests: bool = False) -> BranchDiff:
         owner = url_info["owner"]
         repo = url_info["repo"]
         repo_name = url_info["repo_name"]
         branch = url_info["branch"]
         folder_path = url_info["folder_path"]
 
-        repository = self.github.get_repo(f"{owner}/{repo}")
+        repository = self.github_api.get_repo(f"{owner}/{repo}")
         base_branch = repository.default_branch
         contents = repository.get_contents(folder_path, ref=branch)
 
@@ -318,13 +309,18 @@ class GitHubDiffFetcher:
         return BranchDiff(repo_name, base_branch, branch, filenames, file_contents, file_contents)
 
 
-def fetch_git_diffs(url: str, base_branch: str = None, ignore_tests: bool = False) -> Union[PullRequestDiff, BranchDiff, CommitDiff, str]:
+def fetch_git_diffs(url: str, base_branch: Optional[str] = None, ignore_tests: bool = False) -> Union[PullRequestDiff, BranchDiff, CommitDiff, str]:
     url_type = GitHubURLIdentifier.identify_github_url_type(url)
     if url_type == GitHubURLType.UNKNOWN:
         raise ValueError("Invalid GitHub URL")
 
     github_info = GitHubRepoHelper.get_github_info_from_url(url, url_type)
-    fetcher = GitHubDiffFetcher()
+    github_token = os.getenv("GITHUB_ACCESS_TOKEN")
+    if not github_token:
+        raise ValueError("GitHub token not found. Please set the GITHUB_ACCESS_TOKEN environment variable.")
+    
+    github_api = GitHubAPI(github_token)
+    fetcher = GitHubDiffFetcher(github_api)
 
     if url_type == GitHubURLType.PULL_REQUEST:
         pr_info = GitHubURLIdentifier.extract_repo_and_pr_number(url)
@@ -338,12 +334,3 @@ def fetch_git_diffs(url: str, base_branch: str = None, ignore_tests: bool = Fals
         return fetcher.get_github_file_content(github_info)
     elif url_type == GitHubURLType.FOLDER_PATH:
         return fetcher.get_github_folder_contents(github_info, ignore_tests=ignore_tests)
-
-
-# if __name__ == "__main__":
-#     # pr_diff = fetch_git_diffs("https://github.com/karpathy/llm.c/pull/155")
-#     # for p in pr_diff.patches:
-#     #     print(p)
-#     branch_diff = fetch_git_diffs("https://github.com/jdickinsp/guardian-ai/tree/feature/claude_api")
-#     for p in branch_diff.patches:
-#         print(p)

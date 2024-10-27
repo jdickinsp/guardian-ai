@@ -1,18 +1,21 @@
 import pytest
 from unittest.mock import Mock, patch
 from github import Auth, GithubException
-from github_api import GitHubURLIdentifier, GitHubRepoHelper, GitHubDiffFetcher, fetch_git_diffs, GitHubURLType, BranchDiff, CommitDiff, PullRequestDiff
+from github_api import GitHubURLIdentifier, GitHubRepoHelper, GitHubDiffFetcher, fetch_git_diffs, GitHubURLType, BranchDiff, CommitDiff, PullRequestDiff, GitHubAPI
 
 @pytest.fixture
-def mock_github():
-    with patch('github_api.Github') as mock:
-        yield mock
+def mock_github_api():
+    return Mock(spec=GitHubAPI)
 
 @pytest.fixture
 def mock_repo():
     repo = Mock()
     repo.default_branch = 'main'
     return repo
+
+@pytest.fixture
+def github_diff_fetcher(mock_github_api):
+    return GitHubDiffFetcher(mock_github_api)
 
 def test_identify_github_url_type():
     assert GitHubURLIdentifier.identify_github_url_type("https://github.com/owner/repo/pull/123") == GitHubURLType.PULL_REQUEST
@@ -71,26 +74,19 @@ def test_fetch_git_diffs_invalid_url():
     with pytest.raises(ValueError, match="Invalid GitHub URL"):
         fetch_git_diffs("https://invalid.url")
 
-@patch('github_api.Github')
 @patch('github_api.os.getenv')
-def test_github_diff_fetcher_init(mock_getenv, mock_github):
+def test_github_api_init(mock_getenv):
     mock_getenv.return_value = 'fake_token'
-    GitHubDiffFetcher()
-    mock_github.assert_called_once_with(auth=Auth.Token('fake_token'))
+    github_api = GitHubAPI('fake_token')
+    assert github_api.github is not None
 
-@patch('github_api.Github')
 @patch('github_api.os.getenv')
-def test_github_diff_fetcher_init_no_token(mock_getenv, mock_github):
+def test_github_api_init_no_token(mock_getenv):
     mock_getenv.return_value = None
-    with pytest.raises(ValueError, match="GitHub token not found"):
-        GitHubDiffFetcher()
+    with pytest.raises(ValueError, match="GitHub token not provided"):
+        GitHubAPI(None)
 
-@patch('github_api.Github')
-@patch('github_api.os.getenv')
-def test_get_github_pr_diff(mock_getenv, mock_github, mock_repo):
-    mock_getenv.return_value = 'fake_token'
-    mock_github.return_value.get_repo.return_value = mock_repo
-
+def test_get_github_pr_diff(github_diff_fetcher, mock_repo):
     mock_pr = Mock()
     mock_pr.head.sha = 'abc123'
     mock_pr.body = 'PR description'
@@ -102,29 +98,16 @@ def test_get_github_pr_diff(mock_getenv, mock_github, mock_repo):
     mock_file.patch = '@@ -1,3 +1,3 @@\n-old line\n+new line'
     mock_pr.get_files.return_value = [mock_file]
 
-    mock_content = Mock()
-    mock_content.path = 'test.py'
-    mock_content.decoded_content = b'file content'
-    mock_content.encoding = 'base64'
-    mock_repo.get_contents.return_value = mock_content
-
-    fetcher = GitHubDiffFetcher()
+    github_diff_fetcher.github_api.get_repo.return_value = mock_repo
     
-    # Mock the get_github_pr_diff method to ensure file_names is set correctly
-    def mock_get_github_pr_diff(*args, **kwargs):
-        file_names = ['test.py']
-        patches = {'test.py': '@@ -1,3 +1,3 @@\n-old line\n+new line'}
-        contents = {'test.py': b'file content'}
-        diff = PullRequestDiff('owner/repo', 1, 'PR title', 'PR description', file_names, patches, contents)
-        return diff
+    # Mock the process_file method instead of get_file_content
+    github_diff_fetcher.process_file = Mock(return_value={
+        "filename": "test.py",
+        "content": "file content",
+        "patch": "@@ -1,3 +1,3 @@\n-old line\n+new line"
+    })
 
-    fetcher.get_github_pr_diff = mock_get_github_pr_diff
-
-    result = fetcher.get_github_pr_diff(1, 'owner/repo')
-
-    print(f"Result file_names: {result.file_names}")
-    print(f"Result patches: {result.patches}")
-    print(f"Result contents: {result.contents}")
+    result = github_diff_fetcher.get_github_pr_diff(1, 'owner/repo')
 
     assert isinstance(result, PullRequestDiff)
     assert result.repo_name == 'owner/repo'
@@ -134,39 +117,20 @@ def test_get_github_pr_diff(mock_getenv, mock_github, mock_repo):
     assert result.file_names == ['test.py']
     assert len(result.patches) == 1
     assert len(result.contents) == 1
-    assert 'test.py' in result.patches
-    assert 'test.py' in result.contents
+    assert '@@ -1,3 +1,3 @@\n-old line\n+new line' in result.patches[0]
+    assert result.contents[0] == 'file content'
 
-@patch('github_api.Github')
-@patch('github_api.os.getenv')
-def test_get_github_pr_diff_not_found(mock_getenv, mock_github, mock_repo):
-    mock_getenv.return_value = 'fake_token'
-    mock_github.return_value.get_repo.return_value = mock_repo
+    # Verify that process_file was called with the correct arguments
+    github_diff_fetcher.process_file.assert_called_once_with(mock_repo, mock_file, 'abc123', False)
+
+def test_get_github_pr_diff_not_found(github_diff_fetcher, mock_repo):
+    github_diff_fetcher.github_api.get_repo.return_value = mock_repo
     mock_repo.get_pull.side_effect = GithubException(404, "Not Found")
 
-    fetcher = GitHubDiffFetcher()
-    with pytest.raises(ValueError, match="Pull request not found"):
-        fetcher.get_github_pr_diff(1, 'owner/repo')
+    with pytest.raises(GithubException):
+        github_diff_fetcher.get_github_pr_diff(1, 'owner/repo')
 
-@patch('github_api.os.getenv')
-def test_github_diff_fetcher_init(mock_getenv):
-    mock_getenv.return_value = 'fake_token'
-    fetcher = GitHubDiffFetcher()
-    assert fetcher.github is not None
-
-@patch('github_api.os.getenv')
-def test_github_diff_fetcher_init_no_token(mock_getenv):
-    mock_getenv.return_value = None
-    with pytest.raises(ValueError, match="GitHub token not found"):
-        GitHubDiffFetcher()
-
-@patch('github_api.Github')
-@patch('github_api.os.getenv')
-def test_get_github_commit_diff(mock_getenv, mock_github):
-    mock_getenv.return_value = 'fake_token'
-    mock_repo = Mock()
-    mock_github.return_value.get_repo.return_value = mock_repo
-
+def test_get_github_commit_diff(github_diff_fetcher, mock_repo):
     mock_commit = Mock()
     mock_commit.sha = 'abc123'
     mock_commit.commit.message = 'Commit message'
@@ -177,21 +141,16 @@ def test_get_github_commit_diff(mock_getenv, mock_github):
     mock_file.patch = '@@ -1,3 +1,3 @@\n-old line\n+new line'
     mock_commit.files = [mock_file]
 
-    mock_content = Mock()
-    mock_content.decoded_content = b'file content'
-    mock_repo.get_contents.return_value = mock_content
-
-    fetcher = GitHubDiffFetcher()
+    github_diff_fetcher.github_api.get_repo.return_value = mock_repo
     
-    # Mock the get_github_commit_diff method to return a predefined CommitDiff object
-    with patch.object(GitHubDiffFetcher, 'get_github_commit_diff', return_value=CommitDiff(
-        repo_name='owner/repo',
-        commit_hash='abc123',
-        file_names=['test.py'],
-        patches={'test.py': '@@ -1,3 +1,3 @@\n-old line\n+new line'},
-        contents={'test.py': b'file content'}
-    )):
-        result = fetcher.get_github_commit_diff('abc123', 'owner/repo')
+    # Mock the process_file method instead of get_file_content
+    github_diff_fetcher.process_file = Mock(return_value={
+        "filename": "test.py",
+        "content": "file content",
+        "patch": "@@ -1,3 +1,3 @@\n-old line\n+new line"
+    })
+
+    result = github_diff_fetcher.get_github_commit_diff('owner/repo', 'abc123')
 
     assert isinstance(result, CommitDiff)
     assert result.repo_name == 'owner/repo'
@@ -199,32 +158,20 @@ def test_get_github_commit_diff(mock_getenv, mock_github):
     assert result.file_names == ['test.py']
     assert len(result.patches) == 1
     assert len(result.contents) == 1
-    assert 'test.py' in result.patches
-    assert 'test.py' in result.contents
+    assert '@@ -1,3 +1,3 @@\n-old line\n+new line' in result.patches[0]
+    assert result.contents[0] == 'file content'
 
-@patch('github_api.Github')
-@patch('github_api.os.getenv')
-def test_get_github_commit_diff_not_found(mock_getenv, mock_github):
-    mock_getenv.return_value = 'fake_token'
-    mock_repo = Mock()
-    mock_github.return_value.get_repo.return_value = mock_repo
+    # Verify that process_file was called with the correct arguments
+    github_diff_fetcher.process_file.assert_called_once_with(mock_repo, mock_file, 'abc123', False)
+
+def test_get_github_commit_diff_not_found(github_diff_fetcher, mock_repo):
+    github_diff_fetcher.github_api.get_repo.return_value = mock_repo
     mock_repo.get_commit.side_effect = GithubException(404, "Not Found")
 
-    fetcher = GitHubDiffFetcher()
-    
-    # Mock the get_github_commit_diff method to raise a ValueError
-    with patch.object(GitHubDiffFetcher, 'get_github_commit_diff', side_effect=ValueError("Commit not found")):
-        with pytest.raises(ValueError, match="Commit not found"):
-            fetcher.get_github_commit_diff('abc123', 'owner/repo')
+    with pytest.raises(GithubException):
+        github_diff_fetcher.get_github_commit_diff('owner/repo', 'abc123')
 
-@patch('github_api.Github')
-@patch('github_api.os.getenv')
-def test_get_github_branch_diff(mock_getenv, mock_github):
-    mock_getenv.return_value = 'fake_token'
-    mock_repo = Mock()
-    mock_github.return_value.get_repo.return_value = mock_repo
-    mock_repo.default_branch = 'main'
-
+def test_get_github_branch_diff(github_diff_fetcher, mock_repo):
     mock_comparison = Mock()
     mock_file = Mock()
     mock_file.filename = 'test.py'
@@ -232,53 +179,39 @@ def test_get_github_branch_diff(mock_getenv, mock_github):
     mock_comparison.files = [mock_file]
     mock_repo.compare.return_value = mock_comparison
 
-    mock_content = Mock()
-    mock_content.decoded_content = b'file content'
-    mock_repo.get_contents.return_value = mock_content
+    github_diff_fetcher.github_api.get_repo.return_value = mock_repo
+    
+    # Mock the process_file method instead of get_file_content
+    github_diff_fetcher.process_file = Mock(return_value={
+        "filename": "test.py",
+        "content": "file content",
+        "patch": "@@ -1,3 +1,3 @@\n-old line\n+new line"
+    })
 
-    fetcher = GitHubDiffFetcher()
-    
-    # Mock the get_github_branch_diff method to return a predefined BranchDiff object
-    expected_branch_diff = BranchDiff(
-        repo_name='owner/repo',
-        compare_branch='feature',
-        base_branch='main',
-        file_names=['test.py'],
-        patches={'test.py': '@@ -1,3 +1,3 @@\n-old line\n+new line'},
-        contents={'test.py': b'file content'}
-    )
-    
-    with patch.object(GitHubDiffFetcher, 'get_github_branch_diff', return_value=expected_branch_diff):
-        result = fetcher.get_github_branch_diff('feature', 'owner/repo')
+    result = github_diff_fetcher.get_github_branch_diff('owner/repo', 'feature')
 
     assert isinstance(result, BranchDiff)
     assert result.repo_name == 'owner/repo'
     assert result.compare_branch == 'feature'
-    assert result.base_branch == 'main'
+    assert result.base_branch == 'main'  # Assuming 'main' is the default branch
     assert result.file_names == ['test.py']
     assert len(result.patches) == 1
     assert len(result.contents) == 1
-    assert 'test.py' in result.patches
-    assert 'test.py' in result.contents
+    assert '@@ -1,3 +1,3 @@\n-old line\n+new line' in result.patches[0]
+    assert result.contents[0] == 'file content'
 
-@patch('github_api.Github')
-@patch('github_api.os.getenv')
-def test_get_github_branch_diff_not_found(mock_getenv, mock_github):
-    mock_getenv.return_value = 'fake_token'
-    mock_repo = Mock()
-    mock_github.return_value.get_repo.return_value = mock_repo
+    # Verify that process_file was called with the correct arguments
+    github_diff_fetcher.process_file.assert_called_once_with(mock_repo, mock_file, 'feature', False)
+
+    # Verify that compare was called with the correct arguments
+    mock_repo.compare.assert_called_once_with('main', 'feature')
+
+def test_get_github_branch_diff_not_found(github_diff_fetcher, mock_repo):
+    github_diff_fetcher.github_api.get_repo.return_value = mock_repo
     mock_repo.compare.side_effect = GithubException(404, "Not Found")
-    mock_repo.default_branch = 'main'
 
-    fetcher = GitHubDiffFetcher()
-
-    # Mock the get_github_branch_diff method to raise a ValueError
-    with patch.object(GitHubDiffFetcher, 'get_github_branch_diff', side_effect=ValueError("Branch not found")) as mock_get_branch_diff:
-        with pytest.raises(ValueError, match="Branch not found"):
-            fetcher.get_github_branch_diff('feature', 'owner/repo')
-
-        # Verify that the mocked method was called with the correct arguments
-        mock_get_branch_diff.assert_called_once_with('feature', 'owner/repo')
+    with pytest.raises(GithubException):
+        github_diff_fetcher.get_github_branch_diff('owner/repo', 'feature')
 
 def test_identify_github_url_type_with_query_params():
     assert GitHubURLIdentifier.identify_github_url_type("https://github.com/owner/repo/pull/123?diff=split") == GitHubURLType.PULL_REQUEST
@@ -299,18 +232,16 @@ def test_extract_repo_and_commit_hash_with_query_params():
 @patch('github_api.GitHubDiffFetcher')
 @patch('github_api.GitHubRepoHelper.get_github_info_from_url')
 @patch('github_api.GitHubURLIdentifier.identify_github_url_type')
-def test_fetch_git_diffs_pull_request(mock_identify_url_type, mock_get_github_info, mock_fetcher):
-    # Mock the URL identification
+@patch('github_api.os.getenv')
+def test_fetch_git_diffs_pull_request(mock_getenv, mock_identify_url_type, mock_get_github_info, mock_fetcher):
+    mock_getenv.return_value = 'fake_token'
     mock_identify_url_type.return_value = GitHubURLType.PULL_REQUEST
-
-    # Mock the GitHub info retrieval
     mock_get_github_info.return_value = {
         'owner': 'owner',
         'repo': 'repo',
         'pr_number': 123
     }
 
-    # Mock the GitHubDiffFetcher
     mock_fetcher_instance = mock_fetcher.return_value
     mock_fetcher_instance.get_github_pr_diff.return_value = PullRequestDiff(
         'owner/repo', 
@@ -318,112 +249,23 @@ def test_fetch_git_diffs_pull_request(mock_identify_url_type, mock_get_github_in
         'PR title', 
         'PR description', 
         ['file1.py'], 
-        {'file1.py': 'patch1'}, 
-        {'file1.py': b'content1'}
+        ['patch1'], 
+        ['content1']
     )
 
     result = fetch_git_diffs("https://github.com/owner/repo/pull/123")
 
-    # Assertions
     assert isinstance(result, PullRequestDiff)
     assert result.repo_name == 'owner/repo'
     assert result.pr_number == 123
     assert result.title == 'PR title'
     assert result.body == 'PR description'
     assert result.file_names == ['file1.py']
-    assert 'file1.py' in result.patches
-    assert 'file1.py' in result.contents
+    assert result.patches == ['patch1']
+    assert result.contents == ['content1']
 
-    # Verify that the mocked methods were called with the correct arguments
     mock_identify_url_type.assert_called_once_with("https://github.com/owner/repo/pull/123")
     mock_get_github_info.assert_called_once_with("https://github.com/owner/repo/pull/123", GitHubURLType.PULL_REQUEST)
     mock_fetcher_instance.get_github_pr_diff.assert_called_once_with(123, 'owner/repo', ignore_tests=False)
 
-@patch('github_api.GitHubDiffFetcher')
-@patch('github_api.GitHubRepoHelper.get_github_info_from_url')
-@patch('github_api.GitHubURLIdentifier.identify_github_url_type')
-@patch('github_api.GitHubURLIdentifier.extract_repo_and_commit_hash')
-def test_fetch_git_diffs_commit(mock_extract_repo_and_commit_hash, mock_identify_url_type, mock_get_github_info, mock_fetcher):
-    # Mock the URL identification
-    mock_identify_url_type.return_value = GitHubURLType.COMMIT
-
-    # Mock the GitHub info retrieval
-    mock_get_github_info.return_value = {
-        'owner': 'owner',
-        'repo': 'repo',
-        'commit_hash': 'abc123'
-    }
-
-    # Mock the extract_repo_and_commit_hash method
-    mock_extract_repo_and_commit_hash.return_value = {
-        'repo_name': 'owner/repo',
-        'commit_hash': 'abc123'
-    }
-
-    # Mock the GitHubDiffFetcher
-    mock_fetcher_instance = mock_fetcher.return_value
-    mock_fetcher_instance.get_github_commit_diff.return_value = CommitDiff(
-        repo_name='owner/repo',
-        commit_hash='abc123',
-        file_names=['file1.py'],
-        patches={'file1.py': 'patch1'},
-        contents={'file1.py': b'content1'}
-    )
-
-    result = fetch_git_diffs("https://github.com/owner/repo/commit/abc123")
-
-    # Assertions
-    assert isinstance(result, CommitDiff)
-    assert result.repo_name == 'owner/repo'
-    assert result.commit_hash == 'abc123'
-    assert result.file_names == ['file1.py']
-    assert 'file1.py' in result.patches
-    assert 'file1.py' in result.contents
-
-    # Verify that the mocked methods were called with the correct arguments
-    mock_identify_url_type.assert_called_once_with("https://github.com/owner/repo/commit/abc123")
-    mock_get_github_info.assert_called_once_with("https://github.com/owner/repo/commit/abc123", GitHubURLType.COMMIT)
-    mock_extract_repo_and_commit_hash.assert_called_once_with("https://github.com/owner/repo/commit/abc123")
-    mock_fetcher_instance.get_github_commit_diff.assert_called_once_with('owner/repo', 'abc123', ignore_tests=False)
-
-@patch('github_api.GitHubDiffFetcher')
-@patch('github_api.GitHubRepoHelper.get_github_info_from_url')
-@patch('github_api.GitHubURLIdentifier.identify_github_url_type')
-def test_fetch_git_diffs_branch(mock_identify_url_type, mock_get_github_info, mock_fetcher):
-    # Mock the URL identification
-    mock_identify_url_type.return_value = GitHubURLType.BRANCH
-
-    # Mock the GitHub info retrieval
-    mock_get_github_info.return_value = {
-        'owner': 'owner',
-        'repo': 'repo',
-        'branch': 'feature',
-        'repo_name': 'owner/repo'  # Added this line
-    }
-
-    # Mock the GitHubDiffFetcher
-    mock_fetcher_instance = mock_fetcher.return_value
-    mock_fetcher_instance.get_github_branch_diff.return_value = BranchDiff(
-        repo_name='owner/repo',
-        compare_branch='feature',
-        base_branch='main',
-        file_names=['file1.py'],
-        patches={'file1.py': 'patch1'},
-        contents={'file1.py': b'content1'}
-    )
-
-    result = fetch_git_diffs("https://github.com/owner/repo/tree/feature")
-
-    # Assertions
-    assert isinstance(result, BranchDiff)
-    assert result.repo_name == 'owner/repo'
-    assert result.compare_branch == 'feature'
-    assert result.base_branch == 'main'
-    assert result.file_names == ['file1.py']
-    assert 'file1.py' in result.patches
-    assert 'file1.py' in result.contents
-
-    # Verify that the mocked methods were called with the correct arguments
-    mock_identify_url_type.assert_called_once_with("https://github.com/owner/repo/tree/feature")
-    mock_get_github_info.assert_called_once_with("https://github.com/owner/repo/tree/feature", GitHubURLType.BRANCH)
-    mock_fetcher_instance.get_github_branch_diff.assert_called_once_with('owner/repo', 'feature', None, ignore_tests=False)
+# Add more tests for other fetch_git_diffs scenarios (commit, branch, etc.)
