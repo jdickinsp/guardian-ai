@@ -110,6 +110,37 @@ st.markdown(
             border-radius: 4px;
             background-color: #f6f8fa;
         }
+
+        /* Force left alignment for button content */
+        [data-testid="stHorizontalBlock"] [data-testid="column"] button div {
+            justify-content: flex-start !important;
+            text-align: left !important;
+        }
+
+        /* Individual button styling */
+        [data-testid="stHorizontalBlock"] [data-testid="column"] button {
+            text-align: left !important;
+            padding: 0.50rem 0.25rem !important;
+            line-height: 1 !important.0;
+            min-height: 0 !important;
+            height: auto !important;
+            margin: 0 !important;
+            width: 100% !important;
+            display: flex !important;
+            justify-content: flex-start !important;
+            border: 0px solid #e1e4e8 !important;
+        }
+
+        /* Remove extra spacing from column containers */
+        [data-testid="stHorizontalBlock"] > div {
+            margin: 0 !important;
+            padding: 0 !important;
+        }
+
+        /* Reduce spacing between list items */
+        [data-testid="stVerticalBlock"] > [data-testid="stHorizontalBlock"] {
+            margin-top: -0.75rem !important;  /* Negative margin to pull items closer */
+        }
     </style>
 """,
     unsafe_allow_html=True,
@@ -143,11 +174,11 @@ async def render_sidebar(conn):
         # Reviews list
         for review in st.session_state.reviews:
             with st.container():
-                cols = st.columns([8, 2])
+                cols = st.columns([10])
                 # Modified title handling to show custom prompt if available
                 title = (
-                    review[4][:25] + "..."
-                    if review[4] and len(review[4]) > 25
+                    review[4][:22] + "..."
+                    if review[4] and len(review[4]) > 22
                     else (review[4] if review[4] else review[3])
                 )
 
@@ -157,9 +188,9 @@ async def render_sidebar(conn):
                     st.session_state.selected_review_id = review[0]
                     st.rerun()
 
-                if cols[1].button("🗑️", key=f"delete-{review[0]}"):
-                    delete_review(conn, review[0])
-                    st.rerun()
+                # if cols[1].button("🗑️", key=f"delete-{review[0]}"):
+                #     delete_review(conn, review[0])
+                #     st.rerun()
 
 
 async def render_create_review_page(conn):
