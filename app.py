@@ -144,7 +144,8 @@ async def render_sidebar(conn):
         for review in st.session_state.reviews:
             with st.container():
                 cols = st.columns([8, 2])
-                title = f"{review[4][:30]}" if review[4] else f"{review[3]}"
+                # Modified title handling to show custom prompt if available
+                title = review[4][:40] + "..." if review[4] and len(review[4]) > 40 else (review[4] if review[4] else review[3])
 
                 if cols[0].button(
                     f"📄 {title}", key=f"review-{review[0]}", use_container_width=True
