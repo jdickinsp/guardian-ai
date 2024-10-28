@@ -164,13 +164,18 @@ async def render_sidebar(conn):
 
 async def render_create_review_page(conn):
     with st.container():
-        with st.expander("Create New Review", expanded=True):
-            # GitHub URL input
-            url_input = st.text_input(
-                "GitHub URL",
-                st.session_state.url_input,
-                placeholder="https://github.com/username/repo/pull/123",
-            )
+        with st.expander("Create Review", expanded=True):
+            col1, col2 = st.columns([5, 1.2])
+            with col1:
+                url_input = st.text_input(
+                    "Enter a GitHub URL",
+                    st.session_state.url_input,
+                    placeholder="https://github.com/username/repo/pull/123",
+                )
+                st.caption("Supports: Pull Request URLs, Branch URLs, or Commit URLs")  # Added help text
+            with col2:
+                st.markdown('<div style="margin-top: 25px;"></div>', unsafe_allow_html=True)
+                start_review = st.button("Review", type="primary", use_container_width=True)
             st.session_state.url_input = url_input
 
             # Two-column layout for template/model and prompt
@@ -214,13 +219,6 @@ async def render_create_review_page(conn):
             with col2:
                 whole_file_checked = st.checkbox("Analyze Whole File", False)
                 ignore_tests_checked = st.checkbox("Ignore Tests", True)
-
-            # Start Review button
-            col1, _ = st.columns([2, 3])  # Adjusted ratio for button only
-            start_review = False
-            with col1:
-                if st.button("Start Review", type="primary", use_container_width=False):
-                    start_review = True
 
     # Process review outside of the panel
     if start_review:
@@ -567,3 +565,4 @@ async def main():
 
 if __name__ == "__main__":
     asyncio.run(main())
+
