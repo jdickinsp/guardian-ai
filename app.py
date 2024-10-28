@@ -49,33 +49,33 @@ st.markdown(
             padding-right: 1rem;
             padding-bottom: 1rem;
         }
-        
+
         /* Add specific styling for sidebar header */
         section[data-testid="stSidebar"] h3:first-of-type {
             margin-top: 0;
             padding-top: 0;
         }
-        
+
         /* Hide Streamlit branding */
         .stDeployButton {display:none;}
         footer {display:none;}
-        
+
         /* Main content styling */
         .main > div {
             padding: 2em 2em;  /* Increased top padding from 1em to 2em */
         }
-        
+
         /* Card-like containers */
         .stButton > button {
             border-radius: 4px;
             padding: 0.5rem 1rem;
         }
-        
+
         /* Add new CSS for specific buttons */
         .small-button > button {
             width: auto !important;
         }
-        
+
         /* Review items styling */
         .review-item {
             padding: 0.5rem;
@@ -84,26 +84,26 @@ st.markdown(
             background: white;
             border: 1px solid #e1e4e8;
         }
-        
+
         /* Input fields styling */
         .stTextInput input {
             border-radius: 4px;
         }
-        
+
         /* Tabs styling */
         .stTabs [data-baseweb="tab-list"] {
             gap: 2rem;
         }
-        
+
         .stTabs [data-baseweb="tab"] {
             height: 4rem;
         }
-        
+
         /* Headers */
         h1, h2, h3 {
             margin-bottom: 1rem;
         }
-        
+
         /* Code containers */
         pre {
             padding: 1rem;
@@ -507,11 +507,11 @@ async def render_view_review_page(conn):
     # Review header
     st.markdown(
         f"""
-        ### {review[1]}
+        #### {review[1]}
         **GitHub URL:** [{review[2]}]({review[2]})  
         **Template:** {review[3] or 'Custom'}  
         **Model:** {review[7] if review[7] else 'N/A'}  
-        **Prompt:** {review[4] if review[4] else 'None'}  
+        **Prompt:** {review[4] if review[4] else 'None'}
     """
     )
 
