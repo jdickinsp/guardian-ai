@@ -17,6 +17,7 @@ from html_templates import (
 from db import (
     create_connection,
     db_init,
+    delete_review,
     get_all_reviews,
     get_review_with_files,
     insert_file,
@@ -39,7 +40,7 @@ st.markdown(
     <style>
         /* Sidebar styling */
         section[data-testid="stSidebar"] {
-            width: 300px !important;
+            width: 280px !important;
             background-color: #f8f9fa;
         }
         section[data-testid="stSidebar"] > div {
@@ -140,6 +141,11 @@ st.markdown(
         section[data-testid="stSidebar"] div:nth-of-type(2) [data-testid="stVerticalBlock"] > [data-testid="stHorizontalBlock"] {
             margin-top: -0.75rem !important;  /* Negative margin to pull items closer */
         }
+
+        .compact-divider hr {
+            margin-top: 0.1rem !important;
+            margin-bottom: 0.1rem !important;
+        }
     </style>
 """,
     unsafe_allow_html=True,
@@ -164,7 +170,7 @@ async def render_sidebar(conn):
         st.divider()
 
         # New Review Button
-        if st.button("✨ New Review", type="primary", use_container_width=True):
+        if st.button("✨ New Review", type="secondary", use_container_width=True):
             st.session_state.selected_review_id = None
             st.rerun()
 
@@ -526,24 +532,34 @@ async def render_view_review_page(conn):
         st.error("Review not found!")
         return
 
-    # Review header
-    st.markdown(
-        f"""
-        ### {review[1]}
-        **GitHub URL:** [{review[2]}]({review[2]})  
-        **Template:** {review[3] or 'Custom'}  
-        **Model:** {review[7] if review[7] else 'N/A'}  
-        **Prompt:** {review[4] if review[4] else 'None'}
-    """
-    )
+    # Wrap everything in an expander panel titled "Review"
+    with st.expander("Review", expanded=True):
+        # Review header with better layout
+        hcol1, hcol2 = st.columns([19, 1])  # 80/20 split
+        with hcol1:
+            st.markdown(f"### {review[1]}")
+        with hcol2:
+            if st.button("🗑️", key=f"delete-{review[0]}", use_container_width=True):
+                delete_review(conn, review[0])
+                st.session_state.selected_review_id = None  # Reset to trigger new review screen
+                st.rerun()
+        # st.divider()
+        st.markdown('<div class="compact-divider"><hr/></div>', unsafe_allow_html=True)
 
-    st.divider()
-
-    # Process files
-    filenames = [f[2] for f in files]
-    patches = [f[3] for f in files]
-    contents = [f[4] for f in files]
-    responses = [f[5] for f in files]
+        # Review header
+        st.markdown(
+            f"""
+            **GitHub URL:** [{review[2]}]({review[2]})  
+            **Template:** {review[3] or 'Custom'}  
+            **Model:** {review[7] if review[7] else 'N/A'}  
+            **Prompt:** {review[4] if review[4] else 'None'}
+        """
+        )
+        # Process files
+        filenames = [f[2] for f in files]
+        patches = [f[3] for f in files]
+        contents = [f[4] for f in files]
+        responses = [f[5] for f in files]
 
     diffs = BranchDiff(review[1], None, None, filenames, patches, contents)
 
@@ -589,4 +605,3 @@ async def main():
 
 if __name__ == "__main__":
     asyncio.run(main())
-
