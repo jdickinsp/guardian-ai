@@ -425,8 +425,15 @@ def fetch_git_diffs(
 
 
 if __name__ == "__main__":
-    url = "https://github.com/karpathy/llm.c/tree/master/dev/eval"
+    url = "https://github.com/karpathy/llm.c/commit/5b2e3180fbb5668a0d3c8cecd07b0732ebad330a"
     github_token = os.getenv("GITHUB_ACCESS_TOKEN")
     github_api = GitHubAPI(github_token)
-    url_type = GitHubURLIdentifier.identify_github_url_type(url, github_api)
-    print("url_type", url_type)
+    url_type = GitHubURLIdentifier.identify_github_url_type(github_api, url)
+    commit_info = GitHubURLIdentifier.extract_repo_and_commit_hash(url)
+    fetcher = GitHubDiffFetcher(github_api)
+    diff = fetcher.get_github_commit_diff(
+        commit_info["repo_name"],
+        commit_info["commit_hash"],
+        ignore_tests=True,
+    )
+    print(diff)

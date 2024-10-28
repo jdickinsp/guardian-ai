@@ -201,8 +201,6 @@ def is_ignored_file(file_name):
         "Thumbs.db",
         ".gitignore",
         ".gitattributes",  # System and config files
-        "LICENSE",
-        "README.md",
         "__init__.py",
     ]
 
