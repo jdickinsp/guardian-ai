@@ -40,13 +40,13 @@ st.markdown(
     <style>
         /* Sidebar styling */
         section[data-testid="stSidebar"] {
-            width: 300px !important;
+            width: 280px !important;
             background-color: #f8f9fa;
         }
         section[data-testid="stSidebar"] > div {
-            padding-top: 0.5rem;  /* Reduced from 1rem */
-            padding-left: 1rem;
-            padding-right: 1rem;
+            padding-top: 0.5rem;
+            padding-left: 0.25rem !important;
+            padding-right: 0.25rem !important;
             padding-bottom: 1rem;
         }
 
@@ -110,6 +110,41 @@ st.markdown(
             border-radius: 4px;
             background-color: #f6f8fa;
         }
+
+        /* Force left alignment for button content */
+        section[data-testid="stSidebar"] div:nth-of-type(2) [data-testid="stHorizontalBlock"] [data-testid="column"] button div {
+            justify-content: flex-start !important;
+            text-align: left !important;
+        }
+
+        /* Individual button styling */
+        section[data-testid="stSidebar"] div:nth-of-type(2) [data-testid="stHorizontalBlock"] [data-testid="column"] button {
+            text-align: left !important;
+            padding: 0.50rem 0rem !important;
+            min-height: 0 !important;
+            height: auto !important;
+            margin: 0 !important;
+            width: 100% !important;
+            display: flex !important;
+            justify-content: flex-start !important;
+            border: 0px solid #e1e4e8 !important;
+        }
+
+        /* Remove extra spacing from column containers */
+        section[data-testid="stSidebar"] div:nth-of-type(2) [data-testid="stHorizontalBlock"] > div {
+            margin: 0 !important;
+            padding: 0 !important;
+        }
+
+        /* Reduce spacing between list items */
+        section[data-testid="stSidebar"] div:nth-of-type(2) [data-testid="stVerticalBlock"] > [data-testid="stHorizontalBlock"] {
+            margin-top: -0.75rem !important;  /* Negative margin to pull items closer */
+        }
+
+        .compact-divider hr {
+            margin-top: 0.1rem !important;
+            margin-bottom: 0.1rem !important;
+        }
     </style>
 """,
     unsafe_allow_html=True,
@@ -134,7 +169,7 @@ async def render_sidebar(conn):
         st.divider()
 
         # New Review Button
-        if st.button("✨ New Review", type="primary", use_container_width=True):
+        if st.button("✨ New Review", type="secondary", use_container_width=True):
             st.session_state.selected_review_id = None
             st.rerun()
 
@@ -142,35 +177,34 @@ async def render_sidebar(conn):
 
         # Reviews list
         for review in st.session_state.reviews:
-            with st.container():
-                cols = st.columns([8, 2])
-                # Modified title handling to show custom prompt if available
-                title = (
-                    review[4][:25] + "..."
-                    if review[4] and len(review[4]) > 25
-                    else (review[4] if review[4] else review[3])
-                )
+            cols = st.columns([10])
+            title = (
+                review[4][:22] + "..."
+                if review[4] and len(review[4]) > 22
+                else (review[4] if review[4] else review[3])
+            )
 
-                if cols[0].button(
-                    f"📄 {title}", key=f"review-{review[0]}", use_container_width=True
-                ):
-                    st.session_state.selected_review_id = review[0]
-                    st.rerun()
-
-                if cols[1].button("🗑️", key=f"delete-{review[0]}"):
-                    delete_review(conn, review[0])
-                    st.rerun()
+            if cols[0].button(
+                f"📄 {title}", key=f"review-{review[0]}", use_container_width=True
+            ):
+                st.session_state.selected_review_id = review[0]
+                st.rerun()
 
 
 async def render_create_review_page(conn):
     with st.container():
-        with st.expander("Create New Review", expanded=True):
-            # GitHub URL input
-            url_input = st.text_input(
-                "GitHub URL",
-                st.session_state.url_input,
-                placeholder="https://github.com/username/repo/pull/123",
-            )
+        with st.expander("Create Review", expanded=True):
+            col1, col2 = st.columns([5, 1.2])
+            with col1:
+                url_input = st.text_input(
+                    "Enter a GitHub URL",
+                    st.session_state.url_input,
+                    placeholder="https://github.com/username/repo/pull/123",
+                )
+                st.caption("Supports: Pull Request URLs, Branch URLs, or Commit URLs")  # Added help text
+            with col2:
+                st.markdown('<div style="margin-top: 25px;"></div>', unsafe_allow_html=True)
+                start_review = st.button("Review", type="primary", use_container_width=True)
             st.session_state.url_input = url_input
 
             # Two-column layout for template/model and prompt
@@ -214,13 +248,6 @@ async def render_create_review_page(conn):
             with col2:
                 whole_file_checked = st.checkbox("Analyze Whole File", False)
                 ignore_tests_checked = st.checkbox("Ignore Tests", True)
-
-            # Start Review button
-            col1, _ = st.columns([2, 3])  # Adjusted ratio for button only
-            start_review = False
-            with col1:
-                if st.button("Start Review", type="primary", use_container_width=False):
-                    start_review = True
 
     # Process review outside of the panel
     if start_review:
@@ -310,7 +337,28 @@ async def display_diff_with_diff2html(diff, per_file=True):
         unsafe_allow_html=True,
     )
 
-    html_content = DIFF_VIEWER_HTML_CONTENT(escaped_diff)
+    # Modify the HTML content to include scrollbar styling directly
+    html_content = f"""
+        <style>
+            ::-webkit-scrollbar {{
+                width: 10px !important;
+                height: 10px !important;
+            }}
+            ::-webkit-scrollbar-track {{
+                background: transparent !important;
+            }}
+            ::-webkit-scrollbar-thumb {{
+                background-color: rgba(49, 51, 63, 0.2) !important;
+                border-radius: 5px !important;
+                border: 2px solid transparent !important;
+                background-clip: content-box !important;
+            }}
+            ::-webkit-scrollbar-thumb:hover {{
+                background-color: rgba(49, 51, 63, 0.3) !important;
+            }}
+        </style>
+        {DIFF_VIEWER_HTML_CONTENT(escaped_diff)}
+    """
     components.html(html_content, height=height, scrolling=True)
 
 
@@ -335,7 +383,28 @@ async def display_code_with_highlightjs(code, language, per_file=True):
         unsafe_allow_html=True,
     )
 
-    html_content = CODE_HIGHLIGHT_HTML_CONTENT(language, code)
+    # Modify the HTML content to include scrollbar styling directly
+    html_content = f"""
+        <style>
+            ::-webkit-scrollbar {{
+                width: 10px !important;
+                height: 10px !important;
+            }}
+            ::-webkit-scrollbar-track {{
+                background: transparent !important;
+            }}
+            ::-webkit-scrollbar-thumb {{
+                background-color: rgba(49, 51, 63, 0.2) !important;
+                border-radius: 5px !important;
+                border: 2px solid transparent !important;
+                background-clip: content-box !important;
+            }}
+            ::-webkit-scrollbar-thumb:hover {{
+                background-color: rgba(49, 51, 63, 0.3) !important;
+            }}
+        </style>
+        {CODE_HIGHLIGHT_HTML_CONTENT(language, code)}
+    """
     components.html(html_content, height=height, scrolling=True)
 
 
@@ -504,24 +573,34 @@ async def render_view_review_page(conn):
         st.error("Review not found!")
         return
 
-    # Review header
-    st.markdown(
-        f"""
-        ### {review[1]}
-        **GitHub URL:** [{review[2]}]({review[2]})  
-        **Template:** {review[3] or 'Custom'}  
-        **Model:** {review[7] if review[7] else 'N/A'}  
-        **Prompt:** {review[4] if review[4] else 'None'}
-    """
-    )
+    # Wrap everything in an expander panel titled "Review"
+    with st.expander("Review", expanded=True):
+        # Review header with better layout
+        hcol1, hcol2 = st.columns([19, 1])  # 80/20 split
+        with hcol1:
+            st.markdown(f"### {review[1]}")
+        with hcol2:
+            if st.button("🗑️", key=f"delete-{review[0]}", use_container_width=True):
+                delete_review(conn, review[0])
+                st.session_state.selected_review_id = None  # Reset to trigger new review screen
+                st.rerun()
+        # st.divider()
+        st.markdown('<div class="compact-divider"><hr/></div>', unsafe_allow_html=True)
 
-    st.divider()
-
-    # Process files
-    filenames = [f[2] for f in files]
-    patches = [f[3] for f in files]
-    contents = [f[4] for f in files]
-    responses = [f[5] for f in files]
+        # Review header
+        st.markdown(
+            f"""
+            **GitHub URL:** [{review[2]}]({review[2]})  
+            **Template:** {review[3] or 'Custom'}  
+            **Model:** {review[7] if review[7] else 'N/A'}  
+            **Prompt:** {review[4] if review[4] else 'None'}
+        """
+        )
+        # Process files
+        filenames = [f[2] for f in files]
+        patches = [f[3] for f in files]
+        contents = [f[4] for f in files]
+        responses = [f[5] for f in files]
 
     diffs = BranchDiff(review[1], None, None, filenames, patches, contents)
 
