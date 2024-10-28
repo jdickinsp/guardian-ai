@@ -17,7 +17,6 @@ from html_templates import (
 from db import (
     create_connection,
     db_init,
-    delete_review,
     get_all_reviews,
     get_review_with_files,
     insert_file,
@@ -112,15 +111,15 @@ st.markdown(
         }
 
         /* Force left alignment for button content */
-        [data-testid="stHorizontalBlock"] [data-testid="column"] button div {
+        section[data-testid="stSidebar"] div:nth-of-type(2) [data-testid="stHorizontalBlock"] [data-testid="column"] button div {
             justify-content: flex-start !important;
             text-align: left !important;
         }
 
         /* Individual button styling */
-        [data-testid="stHorizontalBlock"] [data-testid="column"] button {
+        section[data-testid="stSidebar"] div:nth-of-type(2) [data-testid="stHorizontalBlock"] [data-testid="column"] button {
             text-align: left !important;
-            padding: 0.50rem 0.25rem !important;
+            padding: 0.50rem 0rem !important;
             line-height: 1 !important.0;
             min-height: 0 !important;
             height: auto !important;
@@ -132,13 +131,13 @@ st.markdown(
         }
 
         /* Remove extra spacing from column containers */
-        [data-testid="stHorizontalBlock"] > div {
+        section[data-testid="stSidebar"] div:nth-of-type(2) [data-testid="stHorizontalBlock"] > div {
             margin: 0 !important;
             padding: 0 !important;
         }
 
         /* Reduce spacing between list items */
-        [data-testid="stVerticalBlock"] > [data-testid="stHorizontalBlock"] {
+        section[data-testid="stSidebar"] div:nth-of-type(2) [data-testid="stVerticalBlock"] > [data-testid="stHorizontalBlock"] {
             margin-top: -0.75rem !important;  /* Negative margin to pull items closer */
         }
     </style>
@@ -173,24 +172,18 @@ async def render_sidebar(conn):
 
         # Reviews list
         for review in st.session_state.reviews:
-            with st.container():
-                cols = st.columns([10])
-                # Modified title handling to show custom prompt if available
-                title = (
-                    review[4][:22] + "..."
-                    if review[4] and len(review[4]) > 22
-                    else (review[4] if review[4] else review[3])
-                )
+            cols = st.columns([10])
+            title = (
+                review[4][:22] + "..."
+                if review[4] and len(review[4]) > 22
+                else (review[4] if review[4] else review[3])
+            )
 
-                if cols[0].button(
-                    f"📄 {title}", key=f"review-{review[0]}", use_container_width=True
-                ):
-                    st.session_state.selected_review_id = review[0]
-                    st.rerun()
-
-                # if cols[1].button("🗑️", key=f"delete-{review[0]}"):
-                #     delete_review(conn, review[0])
-                #     st.rerun()
+            if cols[0].button(
+                f"📄 {title}", key=f"review-{review[0]}", use_container_width=True
+            ):
+                st.session_state.selected_review_id = review[0]
+                st.rerun()
 
 
 async def render_create_review_page(conn):
