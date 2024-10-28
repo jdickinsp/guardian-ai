@@ -145,7 +145,11 @@ async def render_sidebar(conn):
             with st.container():
                 cols = st.columns([8, 2])
                 # Modified title handling to show custom prompt if available
-                title = review[4][:40] + "..." if review[4] and len(review[4]) > 40 else (review[4] if review[4] else review[3])
+                title = (
+                    review[4][:40] + "..."
+                    if review[4] and len(review[4]) > 40
+                    else (review[4] if review[4] else review[3])
+                )
 
                 if cols[0].button(
                     f"📄 {title}", key=f"review-{review[0]}", use_container_width=True
@@ -199,8 +203,7 @@ async def render_create_review_page(conn):
 
             with col2:
                 prompt_input = st.text_area(
-                    "Custom Instructions (Optional)", 
-                    height=125  # Increased from 100 to 150
+                    "Custom Instructions (Optional)", height=125
                 )
 
             # Options in columns
@@ -431,15 +434,17 @@ async def render_analysis(
 
     try:
         # Get the selected model and determine its type
-        selected_model = selected_model or os.getenv('DEFAULT_LLM_MODEL')
-        if 'gpt' in selected_model.lower():
+        selected_model = selected_model or os.getenv("DEFAULT_LLM_MODEL")
+        if "gpt" in selected_model.lower():
             client_type = LLMType.OPENAI
-        elif 'llama' in selected_model.lower():
+        elif "llama" in selected_model.lower():
             client_type = LLMType.OLLAMA
-        elif 'claude' in selected_model.lower():
+        elif "claude" in selected_model.lower():
             client_type = LLMType.CLAUDE
         else:
-            client_type = string_to_enum(LLMType, os.getenv("DEFAULT_LLM_CLIENT", "openai"))
+            client_type = string_to_enum(
+                LLMType, os.getenv("DEFAULT_LLM_CLIENT", "openai")
+            )
 
         chat = ChatClient(client_type, selected_model)
 
@@ -562,4 +567,3 @@ async def main():
 
 if __name__ == "__main__":
     asyncio.run(main())
-
