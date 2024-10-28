@@ -60,6 +60,7 @@ def test_insert_review(temp_db):
         "https://github.com/test",
         "Test Template",
         "Test Prompt",
+        "gpt-4"  # Added llm_model parameter
     )
     assert review_id is not None
 
@@ -77,6 +78,7 @@ def test_insert_file(temp_db):
         "https://github.com/test",
         "Test Template",
         "Test Prompt",
+        "gpt-4"  # Added llm_model parameter
     )
     file_id = insert_file(
         temp_db, review_id, "test.py", "test diff", "test code", "test response"
@@ -97,6 +99,7 @@ def test_delete_review(temp_db):
         "https://github.com/test",
         "Test Template",
         "Test Prompt",
+        "gpt-4"  # Added llm_model parameter
     )
     insert_file(
         temp_db, review_id, "test.py", "test diff", "test code", "test response"
@@ -119,6 +122,7 @@ def test_get_all_reviews(temp_db):
         "https://github.com/test1",
         "Test Template 1",
         "Test Prompt 1",
+        "gpt-4"  # Added llm_model parameter
     )
     insert_review(
         temp_db,
@@ -126,6 +130,7 @@ def test_get_all_reviews(temp_db):
         "https://github.com/test2",
         "Test Template 2",
         "Test Prompt 2",
+        "gpt-4"  # Added llm_model parameter
     )
 
     reviews = get_all_reviews(temp_db)
@@ -146,6 +151,7 @@ def test_get_review_with_files(temp_db):
         "https://github.com/test",
         "Test Template",
         "Test Prompt",
+        "gpt-4"  # Added llm_model parameter
     )
     insert_file(
         temp_db, review_id, "test1.py", "test diff 1", "test code 1", "test response 1"
@@ -176,7 +182,12 @@ def test_create_connection_exception():
 def test_insert_review_exception(temp_db):
     with pytest.raises(sqlite3.Error) as excinfo:
         insert_review(
-            temp_db, None, "https://github.com/test", "Test Template", "Test Prompt"
+            temp_db,
+            None,
+            "https://github.com/test",
+            "Test Template",
+            "Test Prompt",
+            "gpt-4"  # Added llm_model parameter
         )
     assert "Database error: Name cannot be None" in str(excinfo.value)
 

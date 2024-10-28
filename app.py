@@ -8,7 +8,7 @@ import streamlit.components.v1 as components
 from chat_client import ChatClient
 from detect import get_code_height, get_programming_language
 from github_api import BranchDiff, fetch_git_diffs
-from llm_client import LLMType, get_default_llm_model_name, string_to_enum
+from llm_client import LLMType, string_to_enum, get_available_models
 from html_templates import (
     CODE_HIGHLIGHT_HTML_CONTENT,
     DIFF_VIEWER_HTML_CONTENT,
@@ -16,7 +16,7 @@ from html_templates import (
 )
 from db import (
     create_connection,
-    create_tables,
+    db_init,
     delete_review,
     get_all_reviews,
     get_review_with_files,
@@ -49,33 +49,33 @@ st.markdown(
             padding-right: 1rem;
             padding-bottom: 1rem;
         }
-        
+
         /* Add specific styling for sidebar header */
         section[data-testid="stSidebar"] h3:first-of-type {
             margin-top: 0;
             padding-top: 0;
         }
-        
+
         /* Hide Streamlit branding */
         .stDeployButton {display:none;}
         footer {display:none;}
-        
+
         /* Main content styling */
         .main > div {
             padding: 2em 2em;  /* Increased top padding from 1em to 2em */
         }
-        
+
         /* Card-like containers */
         .stButton > button {
             border-radius: 4px;
             padding: 0.5rem 1rem;
         }
-        
+
         /* Add new CSS for specific buttons */
         .small-button > button {
             width: auto !important;
         }
-        
+
         /* Review items styling */
         .review-item {
             padding: 0.5rem;
@@ -84,26 +84,26 @@ st.markdown(
             background: white;
             border: 1px solid #e1e4e8;
         }
-        
+
         /* Input fields styling */
         .stTextInput input {
             border-radius: 4px;
         }
-        
+
         /* Tabs styling */
         .stTabs [data-baseweb="tab-list"] {
             gap: 2rem;
         }
-        
+
         .stTabs [data-baseweb="tab"] {
             height: 4rem;
         }
-        
+
         /* Headers */
         h1, h2, h3 {
             margin-bottom: 1rem;
         }
-        
+
         /* Code containers */
         pre {
             padding: 1rem;
@@ -144,7 +144,12 @@ async def render_sidebar(conn):
         for review in st.session_state.reviews:
             with st.container():
                 cols = st.columns([8, 2])
-                title = f"{review[4][:30]}" if review[4] else f"{review[3]}"
+                # Modified title handling to show custom prompt if available
+                title = (
+                    review[4][:40] + "..."
+                    if review[4] and len(review[4]) > 40
+                    else (review[4] if review[4] else review[3])
+                )
 
                 if cols[0].button(
                     f"📄 {title}", key=f"review-{review[0]}", use_container_width=True
@@ -159,7 +164,6 @@ async def render_sidebar(conn):
 
 async def render_create_review_page(conn):
     with st.container():
-        # Create a visual container with a border and background
         with st.expander("Create New Review", expanded=True):
             # GitHub URL input
             url_input = st.text_input(
@@ -169,7 +173,7 @@ async def render_create_review_page(conn):
             )
             st.session_state.url_input = url_input
 
-            # Two-column layout for template and prompt
+            # Two-column layout for template/model and prompt
             col1, col2 = st.columns([1, 2])
 
             with col1:
@@ -189,9 +193,17 @@ async def render_create_review_page(conn):
                     "Review Template", prompt_template_options, index=0
                 )
 
+                # Add model selection dropdown below template
+                model_options = get_available_models()
+                selected_model = st.selectbox(
+                    "LLM Model",
+                    model_options,
+                    index=0,
+                )
+
             with col2:
                 prompt_input = st.text_area(
-                    "Custom Instructions (Optional)", height=100
+                    "Custom Instructions (Optional)", height=125
                 )
 
             # Options in columns
@@ -220,6 +232,7 @@ async def render_create_review_page(conn):
                 url_input,
                 prompt_template_selected,
                 prompt_input,
+                selected_model,
             )
 
             await process_review(
@@ -228,6 +241,7 @@ async def render_create_review_page(conn):
                 whole_file_checked,
                 prompt_input,
                 prompt_template_selected,
+                selected_model,
                 stream_checked,
                 conn,
                 review_id,
@@ -240,6 +254,7 @@ async def process_review(
     whole_file_checked,
     prompt_input,
     prompt_template_selected,
+    selected_model,
     stream_checked,
     conn,
     review_id,
@@ -261,6 +276,7 @@ async def process_review(
                     diffs,
                     prompt_input,
                     prompt_template_selected,
+                    selected_model,
                     stream_checked,
                     conn,
                     review_id,
@@ -402,6 +418,7 @@ async def render_analysis(
     diffs,
     prompt_input,
     prompt_template_selected,
+    selected_model,
     stream_checked,
     conn,
     review_id,
@@ -416,11 +433,20 @@ async def render_analysis(
     st.session_state[key] = ""
 
     try:
-        client_type = string_to_enum(LLMType, os.getenv("DEFAULT_LLM_CLIENT", "openai"))
-        model_name = os.getenv(
-            "DEFAULT_LLM_MODEL", get_default_llm_model_name(client_type)
-        )
-        chat = ChatClient(client_type, model_name)
+        # Get the selected model and determine its type
+        selected_model = selected_model or os.getenv("DEFAULT_LLM_MODEL")
+        if "gpt" in selected_model.lower():
+            client_type = LLMType.OPENAI
+        elif "llama" in selected_model.lower():
+            client_type = LLMType.OLLAMA
+        elif "claude" in selected_model.lower():
+            client_type = LLMType.CLAUDE
+        else:
+            client_type = string_to_enum(
+                LLMType, os.getenv("DEFAULT_LLM_CLIENT", "openai")
+            )
+
+        chat = ChatClient(client_type, selected_model)
 
         fpatch = (
             diffs.contents[idx]
@@ -481,9 +507,10 @@ async def render_view_review_page(conn):
     # Review header
     st.markdown(
         f"""
-        ### {review[1]}
+        #### {review[1]}
         **GitHub URL:** [{review[2]}]({review[2]})  
         **Template:** {review[3] or 'Custom'}  
+        **Model:** {review[7] if review[7] else 'N/A'}  
         **Prompt:** {review[4] if review[4] else 'None'}
     """
     )
@@ -519,7 +546,7 @@ async def main():
         return
 
     if not st.session_state.has_run:
-        create_tables(conn)
+        db_init(conn)
         st.session_state.has_run = True
 
     if st.session_state.selected_review_id is None:
@@ -540,4 +567,3 @@ async def main():
 
 if __name__ == "__main__":
     asyncio.run(main())
-

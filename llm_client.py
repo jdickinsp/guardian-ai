@@ -19,6 +19,18 @@ class LLMType(Enum):
     CLAUDE = "claude"
 
 
+def get_available_models():
+    """Return a list of available LLM models."""
+    return [
+        "gpt-4o-mini",  # OpenAI,
+        "gpt-4o",
+        "claude-3-5-sonnet-latest",  # Anthropic
+        "claude-3-haiku-20240307",
+        "llama3.1",  # Ollama
+        "llama3.2",
+    ]
+
+
 def string_to_enum(enum, s):
     try:
         return enum[s.upper()]

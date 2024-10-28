@@ -26,7 +26,7 @@ class ChatClient:
         elif client_type is LLMType.CLAUDE:
             self.client = ClaudeClient(model_name)
         else:
-            raise
+            raise Exception("Invalid llm client type")
 
     def prepare_prompts(self, prompt, prompt_template, patch):
         code_prompt = None

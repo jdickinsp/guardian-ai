@@ -26,6 +26,7 @@ def create_tables(conn):
             github_url TEXT NOT NULL,
             prompt_template TEXT NULL,
             prompt TEXT NULL,
+            llm_model VARCHAR(100) NULL,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         );"""
@@ -80,16 +81,18 @@ def create_tables(conn):
         raise Error(f"Database error: {e}")
 
 
-def insert_review(conn, name, github_url, prompt_template, prompt):
+def insert_review(conn, name, github_url, prompt_template, prompt, llm_model):
     """Insert a new review into the reviews table"""
     try:
         if name is None:
             raise ValueError("Name cannot be None")
         review_id = str(uuid.uuid4())
-        sql_insert_review = """INSERT INTO reviews(id, name, github_url, prompt_template, prompt) VALUES(?,?,?,?,?)"""
+        sql_insert_review = """INSERT INTO reviews(id, name, github_url, prompt_template, prompt, llm_model)
+                              VALUES(?,?,?,?,?,?)"""
         cur = conn.cursor()
         cur.execute(
-            sql_insert_review, (review_id, name, github_url, prompt_template, prompt)
+            sql_insert_review,
+            (review_id, name, github_url, prompt_template, prompt, llm_model),
         )
         conn.commit()
         return review_id
@@ -169,18 +172,28 @@ def get_review_with_files(conn, review_id):
         return None, None
 
 
-def db_init():
-    database = r"bin/code_reviews.db"
+def migrate_database(conn):
+    """Add new columns to existing tables if they don't exist"""
+    try:
+        print("Migrating database...")
+        c = conn.cursor()
+        # Check if llm_model column exists
+        c.execute("PRAGMA table_info(reviews)")
+        columns = [column[1] for column in c.fetchall()]
 
-    # Create a database connection
-    conn = create_connection(database)
+        if "llm_model" not in columns:
+            c.execute("ALTER TABLE reviews ADD COLUMN llm_model VARCHAR(100)")
+            print("Added llm_model column to reviews table")
 
-    # Create tables
+        conn.commit()
+    except Error as e:
+        print(f"Migration error: {e}")
+
+
+def db_init(conn):
+    """Create tables and run migrations"""
     if conn is not None:
         create_tables(conn)
+        migrate_database(conn)
     else:
-        print("Error! Cannot create the database connection.")
-
-    # Close the database connection
-    if conn:
-        conn.close()
+        raise Exception("Error! Cannot create the database connection.")
