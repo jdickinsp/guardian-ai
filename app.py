@@ -146,8 +146,8 @@ async def render_sidebar(conn):
                 cols = st.columns([8, 2])
                 # Modified title handling to show custom prompt if available
                 title = (
-                    review[4][:40] + "..."
-                    if review[4] and len(review[4]) > 40
+                    review[4][:25] + "..."
+                    if review[4] and len(review[4]) > 25
                     else (review[4] if review[4] else review[3])
                 )
 
@@ -507,7 +507,7 @@ async def render_view_review_page(conn):
     # Review header
     st.markdown(
         f"""
-        #### {review[1]}
+        ### {review[1]}
         **GitHub URL:** [{review[2]}]({review[2]})  
         **Template:** {review[3] or 'Custom'}  
         **Model:** {review[7] if review[7] else 'N/A'}  
