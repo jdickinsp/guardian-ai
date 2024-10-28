@@ -44,9 +44,9 @@ st.markdown(
             background-color: #f8f9fa;
         }
         section[data-testid="stSidebar"] > div {
-            padding-top: 0.5rem;  /* Reduced from 1rem */
-            padding-left: 1rem;
-            padding-right: 1rem;
+            padding-top: 0.5rem;
+            padding-left: 0.25rem !important;
+            padding-right: 0.25rem !important;
             padding-bottom: 1rem;
         }
 
