@@ -123,6 +123,28 @@ class GitHubURLIdentifier:
                 "commit_hash": commit_hash,
             }
         return None
+    
+    @staticmethod
+    def extract_repo_and_branch_name(url: str) -> Optional[Dict[str, str]]:
+        """
+        Extracts the repository name and branch name from a GitHub branch URL.
+
+        Args:
+            url (str): The GitHub URL to parse.
+
+        Returns:
+            Optional[Dict[str, str]]: A dictionary with 'repo_name' and 'branch_name' if matched, else None.
+        """
+        pattern = r"https://github\.com/([^/]+)/([^/]+)/tree/([^/]+(?:/[^/]+)*)"
+        match = re.match(pattern, url)
+        if match:
+            owner, repo, branch = match.groups()
+            return {
+                "repo_name": f"{owner}/{repo}",
+                "branch_name": branch
+            }
+        return None
+
 
 
 class GitHubRepoHelper:
@@ -229,10 +251,16 @@ class GitHubDiffFetcher:
 
         content = self.get_file_content(repo, file.filename, ref)
         if content:
+            # Safely handle the patch concatenation
+            patch = ""
+            if file.patch:  # Check if patch exists
+                diff_header = GitHubRepoHelper.get_diff_header(file)
+                patch = f"{diff_header}{file.patch}" if diff_header else file.patch
+
             return {
                 "filename": file.filename,
                 "content": content,
-                "patch": GitHubRepoHelper.get_diff_header(file) + file.patch,
+                "patch": patch,
             }
         return None
 
@@ -426,14 +454,5 @@ def fetch_git_diffs(
 
 if __name__ == "__main__":
     url = "https://github.com/karpathy/llm.c/commit/5b2e3180fbb5668a0d3c8cecd07b0732ebad330a"
-    github_token = os.getenv("GITHUB_ACCESS_TOKEN")
-    github_api = GitHubAPI(github_token)
-    url_type = GitHubURLIdentifier.identify_github_url_type(github_api, url)
-    commit_info = GitHubURLIdentifier.extract_repo_and_commit_hash(url)
-    fetcher = GitHubDiffFetcher(github_api)
-    diff = fetcher.get_github_commit_diff(
-        commit_info["repo_name"],
-        commit_info["commit_hash"],
-        ignore_tests=True,
-    )
-    print(diff)
+    response = fetch_git_diffs(url)
+    print(response)

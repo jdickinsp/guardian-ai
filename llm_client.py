@@ -22,7 +22,8 @@ class LLMType(Enum):
 def get_available_models():
     """Return a list of available LLM models."""
     return [
-        "gpt-4o-mini",  # OpenAI,
+        "o1-mini", # OpenAI,
+        "gpt-4o-mini",  
         "gpt-4o",
         "claude-3-5-sonnet-latest",  # Anthropic
         "claude-3-haiku-20240307",
@@ -40,7 +41,7 @@ def string_to_enum(enum, s):
 
 def get_default_llm_model_name(client_type):
     if client_type is LLMType.OPENAI:
-        return "gpt-4o-mini"
+        return "gpt-4o"
     elif client_type is LLMType.OLLAMA:
         return "llama3.1"
     elif client_type is LLMType.CLAUDE:
@@ -75,10 +76,10 @@ class OpenAIClient(LLMClient):
             stream = await self.async_client.chat.completions.create(
                 model=self.model_name,
                 messages=[
-                    {"role": "system", "content": system_prompt},
+                    {"role": "assistant", "content": system_prompt},
                     {"role": "user", "content": user_message},
                 ],
-                **prompt_options,
+                # **prompt_options,
                 stream=True,
             )
             return stream
@@ -90,10 +91,10 @@ class OpenAIClient(LLMClient):
         resp = self.client.chat.completions.create(
             model=self.model_name,
             messages=[
-                {"role": "system", "content": system_prompt},
+                {"role": "assistant", "content": system_prompt},
                 {"role": "user", "content": user_message},
             ],
-            **prompt_options,
+            # **prompt_options,
         )
         message = resp.choices[0].message.content.strip()
         return message
@@ -102,10 +103,10 @@ class OpenAIClient(LLMClient):
         return self.client.chat.completions.create(
             model=self.model_name,
             messages=[
-                {"role": "system", "content": system_prompt},
+                {"role": "assistant", "content": system_prompt},
                 {"role": "user", "content": user_message},
             ],
-            **prompt_options,
+            # **prompt_options,
             stream=True,
         )
 
@@ -163,14 +164,17 @@ class OllamaClient(LLMClient):
 
 
 class ClaudeClient(LLMClient):
-    def __init__(self, model_name, max_tokens=100_000):
+    def __init__(self, model_name, max_tokens=8192):
         api_key = os.getenv("ANTHROPIC_API_KEY")
         if not api_key:
             raise ValueError("ANTHROPIC_API_KEY environment variable is not set")
         self.async_client = AsyncAnthropic(api_key=api_key)
         self.client = Anthropic(api_key=api_key)
         self.model_name = model_name
-        self.max_tokens = max_tokens
+        if "claude-3-haiku" in model_name:
+            self.max_tokens = 4096
+        else:
+            self.max_tokens = max_tokens
 
     async def async_chat(self, system_prompt, user_message, prompt_options):
         try:
