@@ -45,6 +45,8 @@ class ModelConfig:
             client_type = LLMType.OPENAI
         elif "llama" in model_name.lower():
             client_type = LLMType.OLLAMA
+        elif "deepseek" in model_name.lower():
+            client_type = LLMType.OLLAMA
         elif "claude" in model_name.lower():
             client_type = LLMType.CLAUDE
         else:

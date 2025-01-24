@@ -29,6 +29,8 @@ def get_available_models():
         "claude-3-haiku-20240307",
         "llama3.1",  # Ollama
         "llama3.2",
+        "deepseek-r1:8b",
+        "deepseek-r1:14b"
     ]
 
 
@@ -126,7 +128,7 @@ class OllamaClient(LLMClient):
                 options={
                     "temperature": prompt_options["temperature"],
                     "top_p": prompt_options["top_p"],
-                    "num_ctx": 8192,
+                    # "num_ctx": 8192,
                 },
                 stream=True,
             )
@@ -143,7 +145,7 @@ class OllamaClient(LLMClient):
             options={
                 "temperature": prompt_options["temperature"],
                 "top_p": prompt_options["top_p"],
-                "num_ctx": 8192,
+                # "num_ctx": 8192,
             },
         )
         message = resp["message"]["content"]
@@ -157,7 +159,7 @@ class OllamaClient(LLMClient):
             options={
                 "temperature": prompt_options["temperature"],
                 "top_p": prompt_options["top_p"],
-                "num_ctx": 8192,
+                # "num_ctx": 8192,
             },
             stream=True,
         )

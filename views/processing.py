@@ -17,7 +17,7 @@ async def process_stream_response(stream: Any, client_type: LLMType, sys_out: An
         elif client_type == LLMType.CLAUDE:
             content = chunk.text
         else:
-            content = chunk
+            content = chunk['message']['content']
         st.session_state[key] += content
         sys_out.markdown(st.session_state[key])
 

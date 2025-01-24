@@ -350,13 +350,15 @@ class GitHubDiffFetcher:
             return BranchDiff(
                 repo_name, base_branch, branch, filenames, contents, contents
             )
-        else:
-            comparison = repo.compare(base_branch, branch)
+        
         file = None
-        for file in comparison.files:
-            if file.filename == file_path:
-                file = file
-
+        comparison = repo.compare(base_branch, branch)
+        for comp_file in comparison.files:
+            if comp_file.filename in file_path:
+                file = comp_file
+                break
+        if file is None:
+            raise Exception(f"Error: File not found {file_path}")
         contents = []
         patches = []
         filenames = []
