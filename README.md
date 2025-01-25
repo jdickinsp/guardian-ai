@@ -20,7 +20,7 @@ If you're planning to contribute to Guardian AI or run tests, you'll need to set
 
 1. Clone the repository:
    ```
-   git clone https://github.com/your-repo/guardian-ai.git
+   git clone https://github.com/jdickinsp/guardian-ai.git
    cd guardian-ai
    ```
 
