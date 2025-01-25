@@ -7,11 +7,7 @@ from openai import AsyncOpenAI, OpenAI
 import ollama
 from anthropic import Anthropic, AsyncAnthropic
 
-
-LLAMA_3_TEMPLATE = (
-    lambda system, message: f"""<|begin_of_text|><|start_header_id|>system<|end_header_id|>{system}<|eot_id|><|start_header_id|>user<|end_header_id|>{message}<|eot_id|><|start_header_id|>assistant<|end_header_id|>"""
-)
-
+DEFAULT_TEMPERATURE = 0.6
 
 class LLMType(Enum):
     OLLAMA = "ollama"
@@ -43,7 +39,7 @@ def string_to_enum(enum, s):
 
 def get_default_llm_model_name(client_type):
     if client_type is LLMType.OPENAI:
-        return "gpt-4o"
+        return "o1-mini"
     elif client_type is LLMType.OLLAMA:
         return "llama3.1"
     elif client_type is LLMType.CLAUDE:
@@ -81,7 +77,6 @@ class OpenAIClient(LLMClient):
                     {"role": "assistant", "content": system_prompt},
                     {"role": "user", "content": user_message},
                 ],
-                # **prompt_options,
                 stream=True,
             )
             return stream
@@ -96,7 +91,6 @@ class OpenAIClient(LLMClient):
                 {"role": "assistant", "content": system_prompt},
                 {"role": "user", "content": user_message},
             ],
-            # **prompt_options,
         )
         message = resp.choices[0].message.content.strip()
         return message
@@ -108,7 +102,6 @@ class OpenAIClient(LLMClient):
                 {"role": "assistant", "content": system_prompt},
                 {"role": "user", "content": user_message},
             ],
-            # **prompt_options,
             stream=True,
         )
 
@@ -119,16 +112,31 @@ class OllamaClient(LLMClient):
         self.client = ollama.Client()
         self.model_name = model_name
 
+    def get_messages(self, system_prompt, user_message):
+        messages = []
+        if 'llama' in self.model_name:
+            messages = [
+                {
+                    'role': 'system',
+                    'content': system_prompt,
+                },
+                {
+                    'role': 'user',
+                    'content': user_message,
+                },
+            ]
+        else:
+            messages.append({"role": "user", "content": system_prompt + "  \n" + user_message})
+        return messages
+
     async def async_chat(self, system_prompt, user_message, prompt_options):
         try:
-            content = LLAMA_3_TEMPLATE(system=system_prompt, message=user_message)
+            messages = self.get_messages(system_prompt, user_message)
             stream = await self.async_client.chat(
                 model=self.model_name,
-                messages=[{"role": "user", "content": content}],
+                messages=messages,
                 options={
                     "temperature": prompt_options["temperature"],
-                    "top_p": prompt_options["top_p"],
-                    # "num_ctx": 8192,
                 },
                 stream=True,
             )
@@ -138,28 +146,24 @@ class OllamaClient(LLMClient):
             raise
 
     def chat_response(self, system_prompt, user_message, prompt_options):
-        content = LLAMA_3_TEMPLATE(system=system_prompt, message=user_message)
+        messages = self.get_messages(system_prompt, user_message)
         resp = self.client.chat(
             model=self.model_name,
-            messages=[{"role": "user", "content": content}],
+            messages=messages,
             options={
                 "temperature": prompt_options["temperature"],
-                "top_p": prompt_options["top_p"],
-                # "num_ctx": 8192,
             },
         )
         message = resp["message"]["content"]
         return message.strip()
 
     def stream_chat(self, system_prompt, user_message, prompt_options):
-        content = LLAMA_3_TEMPLATE(system=system_prompt, message=user_message)
+        messages = self.get_messages(system_prompt, user_message)
         return self.client.chat(
             model=self.model_name,
-            messages=[{"role": "user", "content": content}],
+            messages=messages,
             options={
                 "temperature": prompt_options["temperature"],
-                "top_p": prompt_options["top_p"],
-                # "num_ctx": 8192,
             },
             stream=True,
         )
@@ -185,7 +189,7 @@ class ClaudeClient(LLMClient):
                 system=system_prompt,
                 messages=[{"role": "user", "content": user_message}],
                 max_tokens=prompt_options.get("max_tokens", self.max_tokens),
-                temperature=prompt_options.get("temperature", 0.7),
+                temperature=prompt_options.get("temperature", DEFAULT_TEMPERATURE),
                 stream=True,
             )
             return stream
@@ -199,7 +203,7 @@ class ClaudeClient(LLMClient):
             system=system_prompt,
             messages=[{"role": "user", "content": user_message}],
             max_tokens=prompt_options.get("max_tokens", self.max_tokens),
-            temperature=prompt_options.get("temperature", 0.7),
+            temperature=prompt_options.get("temperature", DEFAULT_TEMPERATURE),
         )
         return resp.content[0].text
 
@@ -209,6 +213,6 @@ class ClaudeClient(LLMClient):
             system=system_prompt,
             messages=[{"role": "user", "content": user_message}],
             max_tokens=prompt_options.get("max_tokens", self.max_tokens),
-            temperature=prompt_options.get("temperature", 0.7),
+            temperature=prompt_options.get("temperature", DEFAULT_TEMPERATURE),
             stream=True,
         )

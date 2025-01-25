@@ -23,18 +23,37 @@ PullRequestDiff = namedtuple(
     "PullRequest",
     ["repo_name", "pr_number", "title", "body", "file_names", "patches", "contents"],
 )
-
+FileDiff = namedtuple(
+    "FileDiff",
+    ["repo_name", "base_branch", "compare_branch", "file_names", "patches", "contents"],
+)
+FolderDiff = namedtuple(
+    "FolderDiff",
+    ["repo_name", "base_branch", "compare_branch", "file_names", "patches", "contents"],
+)
 
 class GitHubURLType(Enum):
-    BRANCH = "Branch"
-    FOLDER_PATH = "Folder Path"
-    PULL_REQUEST = "Pull Request"
-    PULL_REQUEST_COMMIT = "Pull Request Commit"
-    FILE_PATH = "File Path"
-    COMMIT = "Commit"
-    BRANCH_OR_FOLDER = "Branch or Folder"
-    UNKNOWN = "Unknown"
+    BRANCH = "branch"
+    FOLDER_PATH = "folder_path"
+    PULL_REQUEST = "pull_request"
+    PULL_REQUEST_COMMIT = "pull_request_commit"
+    FILE_PATH = "file_path"
+    COMMIT = "commit"
+    BRANCH_OR_FOLDER = "branch_or_folder"
+    UNKNOWN = "unknown"
 
+def get_github_url_type(diff):
+    if isinstance(diff, BranchDiff):
+        return GitHubURLType.BRANCH.value
+    elif isinstance(diff, PullRequestDiff):
+        return GitHubURLType.PULL_REQUEST.value
+    elif isinstance(diff, CommitDiff):
+        return GitHubURLType.COMMIT.value
+    elif isinstance(diff, FileDiff):
+        return GitHubURLType.FILE_PATH.value
+    elif isinstance(diff, FolderDiff):
+        return GitHubURLType.FOLDER_PATH.value
+    return None
 
 class GitHubAPI:
     def __init__(self, github_token: str):
@@ -347,7 +366,7 @@ class GitHubDiffFetcher:
             content = file_content.decoded_content.decode("utf-8")
             contents = [content]
             filenames = [file_path]
-            return BranchDiff(
+            return FileDiff(
                 repo_name, base_branch, branch, filenames, contents, contents
             )
         
@@ -372,7 +391,7 @@ class GitHubDiffFetcher:
                 filenames.append(path)
         except Exception as e:
             print(f"Error retrieving content for {path}: {str(e)}")
-        return BranchDiff(repo_name, base_branch, branch, filenames, patches, contents)
+        return FileDiff(repo_name, base_branch, branch, filenames, patches, contents)
 
     def get_github_folder_contents(
         self, url_info: Dict[str, str], ignore_tests: bool = False
@@ -399,7 +418,7 @@ class GitHubDiffFetcher:
                 file_contents.append(content)
                 filenames.append(content_file.path)
 
-        return BranchDiff(
+        return FolderDiff(
             repo_name, base_branch, branch, filenames, file_contents, file_contents
         )
 

@@ -24,6 +24,7 @@ def create_tables(conn):
             id TEXT PRIMARY KEY,
             name TEXT NOT NULL,
             github_url TEXT NOT NULL,
+            github_url_type VARCHAR(100) NULL,
             prompt_template TEXT NULL,
             prompt TEXT NULL,
             llm_model VARCHAR(100) NULL,
@@ -81,18 +82,18 @@ def create_tables(conn):
         raise Error(f"Database error: {e}")
 
 
-def insert_review(conn, name, github_url, prompt_template, prompt, llm_model):
+def insert_review(conn, name, github_url, github_url_type, prompt_template, prompt, llm_model):
     """Insert a new review into the reviews table"""
     try:
         if name is None:
             raise ValueError("Name cannot be None")
         review_id = str(uuid.uuid4())
-        sql_insert_review = """INSERT INTO reviews(id, name, github_url, prompt_template, prompt, llm_model)
-                              VALUES(?,?,?,?,?,?)"""
+        sql_insert_review = """INSERT INTO reviews(id, name, github_url, github_url_type, prompt_template, prompt, llm_model)
+                              VALUES(?,?,?,?,?,?,?)"""
         cur = conn.cursor()
         cur.execute(
             sql_insert_review,
-            (review_id, name, github_url, prompt_template, prompt, llm_model),
+            (review_id, name, github_url, github_url_type, prompt_template, prompt, llm_model),
         )
         conn.commit()
         return review_id
@@ -184,7 +185,9 @@ def migrate_database(conn):
         if "llm_model" not in columns:
             c.execute("ALTER TABLE reviews ADD COLUMN llm_model VARCHAR(100)")
             print("Added llm_model column to reviews table")
-
+        if "github_url_type" not in columns:
+            c.execute("ALTER TABLE reviews ADD COLUMN github_url_type VARCHAR(100)")
+            print("Added github_url_type column to reviews table")
         conn.commit()
     except Error as e:
         print(f"Migration error: {e}")

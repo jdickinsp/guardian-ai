@@ -12,6 +12,7 @@ class DiffData:
     file_names: List[str]
     repo_name: str
     contents: List[str]
+    url_type: str
 
 @dataclass
 class ReviewConfig:
@@ -28,6 +29,7 @@ class ReviewConfig:
     review_id: Optional[str] = None
     repo_name: Optional[str] = None
     url: Optional[str] = None
+    url_type: Optional[str] = None
     created_at: Optional[datetime] = None
 
 @dataclass

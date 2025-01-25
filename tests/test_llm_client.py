@@ -27,7 +27,7 @@ def test_string_to_enum():
 
 
 def test_get_default_llm_model_name():
-    assert get_default_llm_model_name(LLMType.OPENAI) == "gpt-4o-mini"
+    assert get_default_llm_model_name(LLMType.OPENAI) == "o1-mini"
     assert get_default_llm_model_name(LLMType.OLLAMA) == "llama3.1"
     assert get_default_llm_model_name(LLMType.CLAUDE) == "claude-3-5-sonnet-latest"
 

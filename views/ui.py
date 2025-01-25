@@ -12,7 +12,7 @@ from views.html_templates import (
     CODE_HIGHLIGHT_HTML_CONTENT,
     MERMAID_HTML_CONTENT,
 )
-from github_api import fetch_git_diffs, BranchDiff
+from github_api import fetch_git_diffs, BranchDiff, get_github_url_type
 from detect import get_code_height, get_programming_language
 
 async def process_review(diffs: DiffData, config: ReviewConfig, conn: Any, review_id: str) -> None:
@@ -163,6 +163,25 @@ def format_html_with_scrollbars(content: str) -> str:
         {content}
     """
 
+def get_review_title(review):
+    if review[8]:
+        if review[8] == "file_path":
+            return review[3] + " " + review[2].split("/")[-1]
+        elif review[8] == "folder_path":
+            return review[3] + " /" + review[2].split("/")[-1]
+        elif review[8] == "branch":
+            return review[3] + " " + review[2].split("/")[-1]
+        elif review[8] == "pull_request":
+            return review[3] + " pull/" + review[2].split("/")[-1]
+        elif review[8] == "commit":
+            return review[3] + " " + review[2].split("/")[-1][:7]
+    title = (
+        review[4][:22] + "..."
+        if review[4] and len(review[4]) > 22
+        else (review[4] if review[4] else review[3])
+    )
+    return title
+
 async def render_sidebar(conn):
     with st.sidebar:
         st.markdown("### 🔍 Code Review AI")
@@ -178,12 +197,7 @@ async def render_sidebar(conn):
         # Reviews list
         for review in st.session_state.reviews:
             cols = st.columns([10])
-            title = (
-                review[4][:22] + "..."
-                if review[4] and len(review[4]) > 22
-                else (review[4] if review[4] else review[3])
-            )
-
+            title = get_review_title(review)
             if cols[0].button(
                 f"📄 {title}", key=f"review-{review[0]}", use_container_width=True
             ):
@@ -248,6 +262,7 @@ def create_review_form() -> ReviewFormInputs:
 
 def create_review_config(form_inputs: ReviewFormInputs, diffs: DiffData) -> ReviewConfig:
     """Create a review configuration from form inputs."""
+    url_type = get_github_url_type(diffs)
     return ReviewConfig(
         # Processing configuration
         per_file_analysis=form_inputs.per_file_analysis,
@@ -261,6 +276,7 @@ def create_review_config(form_inputs: ReviewFormInputs, diffs: DiffData) -> Revi
         review_id=None,
         repo_name=diffs.repo_name,
         url=form_inputs.url,
+        url_type=url_type,
         created_at=datetime.now()
     )
 
@@ -293,6 +309,7 @@ async def render_create_review_page(conn):
                 conn,
                 review_config.repo_name,
                 review_config.url,
+                review_config.url_type,
                 review_config.prompt_template_selected,
                 review_config.prompt_input,
                 review_config.selected_model,

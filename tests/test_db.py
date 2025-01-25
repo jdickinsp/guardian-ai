@@ -58,6 +58,7 @@ def test_insert_review(temp_db):
         temp_db,
         "Test Review",
         "https://github.com/test",
+        "branch",
         "Test Template",
         "Test Prompt",
         "gpt-4"  # Added llm_model parameter
@@ -76,6 +77,7 @@ def test_insert_file(temp_db):
         temp_db,
         "Test Review",
         "https://github.com/test",
+        "branch",
         "Test Template",
         "Test Prompt",
         "gpt-4"  # Added llm_model parameter
@@ -97,6 +99,7 @@ def test_delete_review(temp_db):
         temp_db,
         "Test Review",
         "https://github.com/test",
+        "branch",
         "Test Template",
         "Test Prompt",
         "gpt-4"  # Added llm_model parameter
@@ -120,6 +123,7 @@ def test_get_all_reviews(temp_db):
         temp_db,
         "Test Review 1",
         "https://github.com/test1",
+        "branch",
         "Test Template 1",
         "Test Prompt 1",
         "gpt-4"  # Added llm_model parameter
@@ -128,6 +132,7 @@ def test_get_all_reviews(temp_db):
         temp_db,
         "Test Review 2",
         "https://github.com/test2",
+        "file_path",
         "Test Template 2",
         "Test Prompt 2",
         "gpt-4"  # Added llm_model parameter
@@ -149,6 +154,7 @@ def test_get_review_with_files(temp_db):
         temp_db,
         "Test Review",
         "https://github.com/test",
+        "commit",
         "Test Template",
         "Test Prompt",
         "gpt-4"  # Added llm_model parameter
@@ -184,7 +190,8 @@ def test_insert_review_exception(temp_db):
         insert_review(
             temp_db,
             None,
-            "https://github.com/test",
+            "https://github.com/test/pull/123",
+            "pull_request",
             "Test Template",
             "Test Prompt",
             "gpt-4"  # Added llm_model parameter

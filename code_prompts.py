@@ -102,63 +102,31 @@ You can provide the diff in the next message, enclosed in triple backticks (```)
 
 
 DEFAULT_PROMPT_OPTIONS = {
-    "top_p": 0.9,
     "temperature": 0.8,
 }
-
 
 CODE_DEBATE_SETTINGS = {
-    "top_p": 0.9,
     "temperature": 0.8,
-    "n": 1,
-    "presence_penalty": 0.5,
-    "frequency_penalty": 0.2,
 }
-
 
 CODE_REFACTOR_SETTINGS = {
-    "top_p": 0.9,
     "temperature": 0.6,
-    "n": 1,
-    "stop": ["```"],
-    "presence_penalty": 0.1,
-    "frequency_penalty": 0.4,
 }
 
-
 CODE_REVIEW_SETTINGS = {
-    "top_p": 0.9,
     "temperature": 0.2,
-    "n": 1,
-    "stop": ["```"],
-    "presence_penalty": 0.1,
-    "frequency_penalty": 0.3,
 }
 
 CODE_SMELLS_SETTINGS = {
-    "top_p": 0.9,
     "temperature": 0.4,
-    "n": 1,
-    "presence_penalty": 0.1,
-    "frequency_penalty": 0.3,
 }
-
 
 CODE_SUMMARY_SETTINGS = {
-    "top_p": 0.9,
     "temperature": 0.7,
-    "n": 1,
-    "presence_penalty": 0.1,
-    "frequency_penalty": 0.3,
 }
 
-
 DOC_STRINGS_SETTINGS = {
-    "top_p": 0.9,
     "temperature": 0.2,
-    "n": 1,
-    "presence_penalty": 0.1,
-    "frequency_penalty": 0.3,
 }
 
 
