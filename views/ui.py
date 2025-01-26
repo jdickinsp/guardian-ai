@@ -194,7 +194,7 @@ def get_review_title(review):
 async def render_sidebar(conn):
     st.session_state.reviews = get_all_reviews(conn)
     with st.sidebar:
-        st.markdown("### 🔍 Guardian AI")
+        st.markdown("### 🔍 Lemma")
 
         if st.button("✨ New Review", type="secondary", use_container_width=True):
             st.session_state.selected_review_id = None

@@ -1,10 +1,10 @@
-# Guardian AI
+# Lemma
 
-Welcome to Guardian AI! This is a project designed to facilitate code review processes by extracting information from GitHub Pull Request, GitHub Branch or GitHub Commit URLs and generating prompts for feedback. This README provides instructions on how to get started with the script.
+Welcome to Lemma! This is a project designed to facilitate code review processes by extracting information from GitHub Pull Request, GitHub Branch or GitHub Commit URLs and generating prompts for feedback. This README provides instructions on how to get started with the script.
 
 ## Prerequisites
 
-Before using the Guardian AI, ensure that you have the following installed:
+Before using the Lemma, ensure that you have the following installed:
 - Python 3.x
 - `pip install -r requirements.txt`
 
@@ -16,12 +16,12 @@ Environmental Variables:
 
 ## Development Setup
 
-If you're planning to contribute to Guardian AI or run tests, you'll need to set up the development environment:
+If you're planning to contribute to Lemma or run tests, you'll need to set up the development environment:
 
 1. Clone the repository:
    ```
-   git clone https://github.com/jdickinsp/guardian-ai.git
-   cd guardian-ai
+   git clone https://github.com/jdickinsp/lemma.git
+   cd lemma
    ```
 
 2. Create a virtual environment (optional but recommended):
@@ -42,7 +42,7 @@ If you're planning to contribute to Guardian AI or run tests, you'll need to set
 
 ## Getting Started
 
-To use the Guardian AI, follow these steps:
+To use the Lemma, follow these steps:
 
 1. --url: The URL of the GitHub Pull Request, Branch or Commit to review.
 2. [options]: Optional parameters:
@@ -67,7 +67,7 @@ python -m streamlit run app.py
 
 ## Running Test Coverage
 
-To run test coverage for Guardian AI:
+To run test coverage for Lemma:
 
 1. Ensure you've completed the Development Setup steps above.
 
@@ -88,5 +88,3 @@ This command will run all tests and provide a coverage report in the terminal.
    ```
    python -m pytest --cov --cov-report=term-missing
    ```
-
-Remember to regularly run and maintain your test coverage to ensure the reliability of Guardian AI.

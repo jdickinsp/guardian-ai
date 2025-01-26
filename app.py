@@ -11,7 +11,7 @@ from db import create_connection, db_init
 
 # Set page configuration
 st.set_page_config(
-    page_title="Guardian AI",
+    page_title="Lemma",
     page_icon="🔍",
     layout="wide",
     initial_sidebar_state="expanded",
