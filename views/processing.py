@@ -1,9 +1,9 @@
 from typing import Tuple, List, Any
 import streamlit as st
-from views.config import DiffData, AnalysisContext, ModelConfig
+from views.config import DiffData, AnalysisContext, ModelConfig, Project
 from llm_client import LLMType
 from chat_client import ChatClient
-from db import insert_file
+from db import insert_file, insert_project
 
 
 async def process_stream_response(
@@ -21,7 +21,9 @@ async def process_stream_response(
         sys_out.markdown(st.session_state[key])
 
 
-async def generate_analysis(context: AnalysisContext, model_config: ModelConfig) -> str:
+async def generate_analysis(
+    context: AnalysisContext, model_config: ModelConfig, sys_out: any
+) -> str:
     """Generate analysis using the configured LLM."""
     chat = ChatClient(model_config.client_type, model_config.model_name)
 
@@ -41,9 +43,7 @@ async def generate_analysis(context: AnalysisContext, model_config: ModelConfig)
         stream = await chat.async_chat_response(prompts)
         key = f"ai_comment_{context.idx}"
         st.session_state[key] = ""
-        await process_stream_response(
-            stream, model_config.client_type, context.sys_out, key
-        )
+        await process_stream_response(stream, model_config.client_type, sys_out, key)
         response = st.session_state[key]
     else:
         response = chat.chat_response(prompts)
@@ -59,17 +59,25 @@ def get_patches(diffs: DiffData, is_per_file: bool) -> Tuple[List[str], List[str
     return [combined_patch], ["Combined Files"]
 
 
-def save_analysis(context: AnalysisContext, response: str) -> None:
-    """Save the analysis results to the database."""
+def save_review(context: AnalysisContext, response: str, conn: any) -> int:
+    """Save the review results to the database."""
     code_content = (
         context.diffs.contents[context.idx] if context.config.per_file_analysis else " "
     )
-
-    insert_file(
-        context.conn,
+    file_id = insert_file(
+        conn,
         context.review_id,
         context.file_name,
         context.patch,
         code_content,
         response,
     )
+    return file_id
+
+
+def save_project(project: Project, conn: any) -> int:
+    """Save the new project to the database."""
+    project_id = insert_project(
+        conn, project.name, project.github_repo_url, project.repo_validated
+    )
+    return project_id

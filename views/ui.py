@@ -3,16 +3,28 @@ from typing import Any, List, Tuple
 import streamlit as st
 import streamlit.components.v1 as components
 
-from db import delete_review, get_review_with_files, insert_review
+from db import (
+    delete_review,
+    get_all_project_reviews,
+    get_all_projects,
+    get_all_reviews,
+    get_review_with_files,
+    insert_review,
+)
 from views.forms import FormOptions, ReviewFormInputs
-from views.processing import generate_analysis, get_patches, save_analysis
-from views.config import AnalysisContext, ModelConfig, ReviewConfig, DiffData
+from views.processing import generate_analysis, get_patches, save_project, save_review
+from views.config import AnalysisContext, ModelConfig, Project, ReviewConfig, DiffData
 from views.html_templates import (
     DIFF_VIEWER_HTML_CONTENT,
     CODE_HIGHLIGHT_HTML_CONTENT,
     MERMAID_HTML_CONTENT,
 )
-from github_api import fetch_git_diffs, BranchDiff, get_github_url_type
+from github_api import (
+    fetch_git_diffs,
+    BranchDiff,
+    get_github_url_type,
+    validate_github_repo_url,
+)
 from detect import get_code_height, get_programming_language
 
 
@@ -26,32 +38,6 @@ async def process_review(
         await render_patch_section(
             diffs, config, conn, review_id, file_name, patch, idx
         )
-
-
-async def render_sidebar(conn):
-    """Render the sidebar with review navigation."""
-    with st.sidebar:
-        st.markdown("### 🔍 Code Review AI")
-        st.divider()
-
-        if st.button("✨ New Review", type="secondary", use_container_width=True):
-            st.session_state.selected_review_id = None
-            st.rerun()
-
-        st.markdown("### Recent Reviews")
-        for review in st.session_state.reviews:
-            cols = st.columns([10])
-            title = (
-                review[4][:22] + "..."
-                if review[4] and len(review[4]) > 22
-                else (review[4] if review[4] else review[3])
-            )
-
-            if cols[0].button(
-                f"📄 {title}", key=f"review-{review[0]}", use_container_width=True
-            ):
-                st.session_state.selected_review_id = review[0]
-                st.rerun()
 
 
 async def render_code_view(
@@ -206,15 +192,21 @@ def get_review_title(review):
 
 
 async def render_sidebar(conn):
+    st.session_state.reviews = get_all_reviews(conn)
     with st.sidebar:
-        st.markdown("### 🔍 Code Review AI")
-        st.divider()
+        st.markdown("### 🔍 Guardian AI")
 
-        # New Review Button
         if st.button("✨ New Review", type="secondary", use_container_width=True):
             st.session_state.selected_review_id = None
+            st.session_state.current_view = "home"
             st.rerun()
 
+        if st.button("📁 Projects", type="secondary", use_container_width=True):
+            st.session_state.selected_review_id = None
+            st.session_state.current_view = "projects"
+            st.rerun()
+
+        st.divider()
         st.markdown("### Recent Reviews")
 
         # Reviews list
@@ -225,6 +217,7 @@ async def render_sidebar(conn):
                 f"📄 {title}", key=f"review-{review[0]}", use_container_width=True
             ):
                 st.session_state.selected_review_id = review[0]
+                st.session_state.current_view = "review"
                 st.rerun()
 
 
@@ -279,7 +272,7 @@ def create_review_form() -> ReviewFormInputs:
 
 
 def create_review_config(
-    form_inputs: ReviewFormInputs, diffs: DiffData
+    form_inputs: ReviewFormInputs, diffs: DiffData, project_id=None
 ) -> ReviewConfig:
     """Create a review configuration from form inputs."""
     url_type = get_github_url_type(diffs)
@@ -297,13 +290,15 @@ def create_review_config(
         url=form_inputs.url,
         url_type=url_type,
         created_at=datetime.now(),
+        project_id=project_id,
     )
 
 
-async def render_create_review_page(conn):
+async def render_create_review_page(conn, project_id=None):
     """Render the create review page and handle form submission."""
     with st.container():
-        with st.expander("Create Review", expanded=True):
+        title = f"Create Review - {project_id}" if project_id else "Create Review"
+        with st.expander(title, expanded=True):
             col1, col2 = st.columns([5, 1.2])
 
             with col1:
@@ -323,10 +318,7 @@ async def render_create_review_page(conn):
             diffs = fetch_git_diffs(
                 form_inputs.url, ignore_tests=form_inputs.ignore_tests
             )
-
-            review_config = create_review_config(form_inputs, diffs)
-
-            # Insert review into database
+            review_config = create_review_config(form_inputs, diffs, project_id)
             review_config.review_id = insert_review(
                 conn,
                 review_config.repo_name,
@@ -335,12 +327,11 @@ async def render_create_review_page(conn):
                 review_config.prompt_template_selected,
                 review_config.prompt_input,
                 review_config.selected_model,
+                review_config.project_id,
             )
-
-            # Process the review
             await process_review(
                 diffs=diffs,
-                config=review_config,  # Now using the correct config structure
+                config=review_config,
                 conn=conn,
                 review_id=review_config.review_id,
             )
@@ -394,22 +385,20 @@ async def render_analysis(
         context = AnalysisContext(
             diffs=diffs,
             config=config,
-            conn=conn,
             review_id=review_id,
             file_name=file_name,
             patch=patch,
             idx=idx,
-            sys_out=sys_out,
         )
 
         # Configure model
         model_config = ModelConfig.from_model_name(config.selected_model)
 
         # Generate analysis
-        response = await generate_analysis(context, model_config)
+        response = await generate_analysis(context, model_config, sys_out)
 
         # Save results
-        save_analysis(context, response)
+        save_review(context, response, conn)
 
         # Render response
         key = f"ai_comment_{idx}"
@@ -449,18 +438,16 @@ async def render_view_review_page(conn):
 
     # Wrap everything in an expander panel titled "Review"
     with st.expander("Review", expanded=True):
-        # Review header with better layout
+        # Review header
         hcol1, hcol2 = st.columns([19, 1])  # 80/20 split
         with hcol1:
             st.markdown(f"### {review[1]}")
         with hcol2:
-            if st.button("🗑️", key=f"delete-{review[0]}", use_container_width=True):
+            if st.button("🗑️", key=f"delete-{review[0]}", use_container_width=False):
                 delete_review(conn, review[0])
-                st.session_state.selected_review_id = (
-                    None  # Reset to trigger new review screen
-                )
+                st.session_state.selected_review_id = None
+                st.session_state.current_view = "home"
                 st.rerun()
-        # st.divider()
         st.markdown('<div class="compact-divider"><hr/></div>', unsafe_allow_html=True)
 
         # Review header
@@ -489,3 +476,72 @@ async def render_view_review_page(conn):
                 sys_out = col2.empty()
                 key = f"ai_comment_{idx}"
                 await render_response(response, key, sys_out)
+
+
+@st.dialog("Create Project", width="large")
+def dialog_create_project(conn):
+    project_name = st.text_input("Project Name", st.session_state.project_name_input)
+    github_repo_url = st.text_input(
+        "Github Repo URL, e.g. https://github.com/karpathy/llm.c",
+        st.session_state.project_github_repo_url_input,
+    )
+    if st.button("Submit"):
+        repo_validated, validation_reason = validate_github_repo_url(github_repo_url)
+        if not repo_validated:
+            st.warning(validation_reason)
+        else:
+            project = Project(
+                project_name,
+                github_repo_url,
+                repo_validated,
+            )
+            st.session_state.new_project = project
+            st.rerun()
+
+
+async def render_projects_page(conn):
+    with st.container():
+        with st.expander("Projects", expanded=True):
+            if st.button(
+                "📁 Create Project", type="secondary", use_container_width=False
+            ):
+                dialog_create_project(conn)
+
+            new_project = st.session_state.new_project
+            if new_project is not None:
+                project_id = save_project(new_project, conn)
+                st.session_state.new_project = None
+                st.session_state.current_project_id = project_id
+                st.session_state.current_view = "project-home"
+                st.rerun()
+
+    with st.container():
+        with st.expander("Your Projects", expanded=True):
+            projects = get_all_projects(conn)
+            for project in projects:
+                button_title = f"{project[1]} - {project[2]} - {project[0]}"
+                if st.button(button_title, use_container_width=True):
+                    st.session_state.current_project_id = project[0]
+                    st.session_state.current_view = "project-home"
+                    st.rerun()
+
+
+async def render_project_home_page(conn, project_id):
+    with st.container():
+        with st.expander(f"Project - {project_id}", expanded=True):
+            st.write("Indexed Status")
+            if st.button("Add Review", type="primary", use_container_width=False):
+                st.session_state.selected_review_id = None
+                st.session_state.current_project_id = project_id
+                st.session_state.current_view = "home"
+                st.rerun()
+
+    project_reviews = get_all_project_reviews(conn, project_id)
+    with st.container():
+        with st.expander(f"Recent Reviews", expanded=True):
+            for review in project_reviews:
+                button_title = f"{review[2]} - {review[1]} - {review[0]}"
+                if st.button(button_title, use_container_width=True):
+                    st.session_state.selected_review_id = review[0]
+                    st.session_state.current_view = "review"
+                    st.rerun()

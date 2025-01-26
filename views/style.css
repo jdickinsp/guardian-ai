@@ -1,6 +1,6 @@
 /* Sidebar styling */
 section[data-testid="stSidebar"] {
-    width: 280px !important;
+    width: 260px !important;
     background-color: #f8f9fa;
 }
 
@@ -113,7 +113,7 @@ section[data-testid="stSidebar"] div:nth-of-type(2) [data-testid="stVerticalBloc
 div[data-testid="stSidebarHeader"] {
     padding-top: 0.5em;
     padding-right: 0.2em;
-    /* padding-right: 0.5em; */
+    padding-left: 0.2em;
 }
 
 div[data-testid="stSidebarCollapsedControl"] {

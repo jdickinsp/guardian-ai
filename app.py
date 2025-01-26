@@ -1,11 +1,17 @@
 import asyncio
 import streamlit as st
-from views.ui import render_create_review_page, render_sidebar, render_view_review_page
-from db import create_connection, db_init, get_all_reviews
+from views.ui import (
+    render_create_review_page,
+    render_project_home_page,
+    render_sidebar,
+    render_view_review_page,
+    render_projects_page,
+)
+from db import create_connection, db_init
 
 # Set page configuration
 st.set_page_config(
-    page_title="Code Review AI",
+    page_title="Guardian AI",
     page_icon="🔍",
     layout="wide",
     initial_sidebar_state="expanded",
@@ -28,6 +34,16 @@ def init_session_state():
         st.session_state.reviews = []
     if "has_run" not in st.session_state:
         st.session_state.has_run = False
+    if "current_view" not in st.session_state:
+        st.session_state.current_view = "home"
+    if "project_name_input" not in st.session_state:
+        st.session_state.project_name_input = ""
+    if "project_github_repo_url_input" not in st.session_state:
+        st.session_state.project_github_repo_url_input = ""
+    if "current_project_id" not in st.session_state:
+        st.session_state.current_project_id = None
+    if "new_project" not in st.session_state:
+        st.session_state.new_project = None
 
 
 async def main():
@@ -42,13 +58,19 @@ async def main():
         db_init(conn)
         st.session_state.has_run = True
 
-    st.session_state.reviews = get_all_reviews(conn)
     await render_sidebar(conn)
 
     if st.session_state.selected_review_id:
-        await render_view_review_page(conn)
-    else:
-        await render_create_review_page(conn)
+        await render_view_review_page(
+            conn,
+        )
+
+    if st.session_state.current_view == "home":
+        await render_create_review_page(conn, st.session_state.current_project_id)
+    elif st.session_state.current_view == "project-home":
+        await render_project_home_page(conn, st.session_state.current_project_id)
+    elif st.session_state.current_view == "projects":
+        await render_projects_page(conn)
 
     if conn:
         conn.close()

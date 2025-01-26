@@ -495,6 +495,43 @@ def fetch_git_diffs(
         raise ValueError(f"Unsupported URL type: {url_type}")
 
 
+def validate_github_repo_url(url):
+    # Define a regex pattern to match GitHub repository URLs
+    github_repo_pattern = r"https?://github\.com/([^/]+)/([^/]+)(\.git)?$"
+    match = re.match(github_repo_pattern, url)
+
+    if not match:
+        return False, "Invalid GitHub repository URL format."
+
+    owner, repo = match.groups()[:2]  # Extract owner and repo name
+
+    github_api = Github(os.getenv("GITHUB_ACCESS_TOKEN"))
+
+    try:
+        # Get the authenticated user
+        authenticated_user = github_api.get_user().login
+
+        # Get the repository
+        repo_obj = github_api.get_repo(f"{owner}/{repo}")
+
+        # Check if the authenticated user has permissions
+        permissions = repo_obj.permissions
+
+        if permissions.admin or permissions.push or permissions.pull:
+            return (
+                True,
+                f"Valid repository URL with access for user: {authenticated_user}.",
+            )
+        else:
+            return (
+                False,
+                f"Repository exists, but you do not have necessary permissions.",
+            )
+
+    except Exception as e:
+        return False, f"Error validating repository: {str(e)}"
+
+
 if __name__ == "__main__":
     url = "https://github.com/karpathy/llm.c/commit/5b2e3180fbb5668a0d3c8cecd07b0732ebad330a"
     response = fetch_git_diffs(url)

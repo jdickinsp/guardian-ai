@@ -35,6 +35,7 @@ class ReviewConfig:
     url: Optional[str] = None
     url_type: Optional[str] = None
     created_at: Optional[datetime] = None
+    project_id: Optional[str] = None
 
 
 @dataclass
@@ -71,9 +72,16 @@ class AnalysisContext:
 
     diffs: DiffData
     config: ReviewConfig
-    conn: Any
     review_id: str
     file_name: str
     patch: str
     idx: int
-    sys_out: Any  # Streamlit empty container
+
+
+@dataclass
+class Project:
+    """User inputs to create a project."""
+
+    name: str
+    github_repo_url: str
+    repo_validated: bool
