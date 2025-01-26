@@ -5,9 +5,11 @@ import streamlit as st
 from views.config import ReviewConfig, DiffData
 from llm_client import get_available_models
 
+
 @dataclass
 class ReviewFormInputs:
     """User inputs from the review form."""
+
     url: str
     prompt_template: Optional[str]
     model: str
@@ -17,24 +19,29 @@ class ReviewFormInputs:
     analyze_whole_file: bool
     ignore_tests: bool
 
+
 @dataclass
 class FormOptions:
     """Available options for form fields."""
-    prompt_templates: List[Optional[str]] = field(default_factory=lambda: [
-        "code-review",
-        "code-summary",
-        "dependency-order",
-        "review-by-context",
-        "code-debate",
-        "code-smells",
-        "code-refactor",
-        "explain-lines",
-        "doc-strings",
-        "doc-markdown",
-        "unit-test",
-        None
-    ])
+
+    prompt_templates: List[Optional[str]] = field(
+        default_factory=lambda: [
+            "code-review",
+            "code-summary",
+            "dependency-order",
+            "review-by-context",
+            "code-debate",
+            "code-smells",
+            "code-refactor",
+            "explain-lines",
+            "doc-strings",
+            "doc-markdown",
+            "unit-test",
+            None,
+        ]
+    )
     models: List[str] = field(default_factory=get_available_models)
+
 
 def create_review_form() -> ReviewFormInputs:
     """Create and render the review form."""
@@ -48,12 +55,10 @@ def create_review_form() -> ReviewFormInputs:
 
     col1, col2 = st.columns([1, 2])
     form_options = FormOptions()
-    
+
     with col1:
         prompt_template = st.selectbox(
-            "Review Template", 
-            form_options.prompt_templates, 
-            index=0
+            "Review Template", form_options.prompt_templates, index=0
         )
         model = st.selectbox(
             "LLM Model",
@@ -62,10 +67,7 @@ def create_review_form() -> ReviewFormInputs:
         )
 
     with col2:
-        custom_instructions = st.text_area(
-            "Custom Instructions (Optional)", 
-            height=125
-        )
+        custom_instructions = st.text_area("Custom Instructions (Optional)", height=125)
 
     col1, col2 = st.columns(2)
     with col1:
@@ -83,10 +85,13 @@ def create_review_form() -> ReviewFormInputs:
         stream_output=stream_output,
         per_file_analysis=per_file_analysis,
         analyze_whole_file=analyze_whole_file,
-        ignore_tests=ignore_tests
+        ignore_tests=ignore_tests,
     )
 
-def create_review_config(form_inputs: ReviewFormInputs, diffs: DiffData) -> ReviewConfig:
+
+def create_review_config(
+    form_inputs: ReviewFormInputs, diffs: DiffData
+) -> ReviewConfig:
     """Create a review configuration from form inputs."""
     return ReviewConfig(
         per_file_analysis=form_inputs.per_file_analysis,
@@ -97,5 +102,5 @@ def create_review_config(form_inputs: ReviewFormInputs, diffs: DiffData) -> Revi
         stream_checked=form_inputs.stream_output,
         repo_name=diffs.repo_name,
         url=form_inputs.url,
-        created_at=datetime.now()
+        created_at=datetime.now(),
     )

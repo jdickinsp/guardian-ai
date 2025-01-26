@@ -15,12 +15,18 @@ from views.html_templates import (
 from github_api import fetch_git_diffs, BranchDiff, get_github_url_type
 from detect import get_code_height, get_programming_language
 
-async def process_review(diffs: DiffData, config: ReviewConfig, conn: Any, review_id: str) -> None:
+
+async def process_review(
+    diffs: DiffData, config: ReviewConfig, conn: Any, review_id: str
+) -> None:
     """Process code review for either individual files or combined patches."""
     patches, filenames = get_patches(diffs, config.per_file_analysis)
-    
+
     for idx, (patch, file_name) in enumerate(zip(patches, filenames)):
-        await render_patch_section(diffs, config, conn, review_id, file_name, patch, idx)
+        await render_patch_section(
+            diffs, config, conn, review_id, file_name, patch, idx
+        )
+
 
 async def render_sidebar(conn):
     """Render the sidebar with review navigation."""
@@ -40,12 +46,17 @@ async def render_sidebar(conn):
                 if review[4] and len(review[4]) > 22
                 else (review[4] if review[4] else review[3])
             )
-            
-            if cols[0].button(f"📄 {title}", key=f"review-{review[0]}", use_container_width=True):
+
+            if cols[0].button(
+                f"📄 {title}", key=f"review-{review[0]}", use_container_width=True
+            ):
                 st.session_state.selected_review_id = review[0]
                 st.rerun()
 
-async def render_code_view(diffs: DiffData, patch: str, file_name: str, config: ReviewConfig, idx: int):
+
+async def render_code_view(
+    diffs: DiffData, patch: str, file_name: str, config: ReviewConfig, idx: int
+):
     """Render code and diff views with tabs."""
     if config is None:
         config = ReviewConfig()
@@ -69,7 +80,10 @@ async def render_code_view(diffs: DiffData, patch: str, file_name: str, config: 
                         content, prog_language, config.per_file_analysis
                     )
     else:
-        await display_code_with_highlightjs(code, prog_language, config.per_file_analysis)
+        await display_code_with_highlightjs(
+            code, prog_language, config.per_file_analysis
+        )
+
 
 async def display_diff_with_diff2html(diff: str, per_file: bool = True):
     """Render diff with syntax highlighting."""
@@ -96,7 +110,10 @@ async def display_diff_with_diff2html(diff: str, per_file: bool = True):
     html_content = format_html_with_scrollbars(DIFF_VIEWER_HTML_CONTENT(escaped_diff))
     components.html(html_content, height=height, scrolling=True)
 
-async def display_code_with_highlightjs(code: str, language: str, per_file: bool = True):
+
+async def display_code_with_highlightjs(
+    code: str, language: str, per_file: bool = True
+):
     """Render code with syntax highlighting."""
     height = min(get_code_height(code), 1000) if per_file else get_code_height(code)
 
@@ -116,8 +133,11 @@ async def display_code_with_highlightjs(code: str, language: str, per_file: bool
         unsafe_allow_html=True,
     )
 
-    html_content = format_html_with_scrollbars(CODE_HIGHLIGHT_HTML_CONTENT(language, code))
+    html_content = format_html_with_scrollbars(
+        CODE_HIGHLIGHT_HTML_CONTENT(language, code)
+    )
     components.html(html_content, height=height, scrolling=True)
+
 
 async def render_mermaid(mermaid_code: str):
     """Render Mermaid diagrams."""
@@ -138,6 +158,7 @@ async def render_mermaid(mermaid_code: str):
 
     mermaid_template = MERMAID_HTML_CONTENT(mermaid_code)
     components.html(mermaid_template, height=1000)
+
 
 def format_html_with_scrollbars(content: str) -> str:
     """Add custom scrollbar styling to HTML content."""
@@ -163,6 +184,7 @@ def format_html_with_scrollbars(content: str) -> str:
         {content}
     """
 
+
 def get_review_title(review):
     if review[8]:
         if review[8] == "file_path":
@@ -181,6 +203,7 @@ def get_review_title(review):
         else (review[4] if review[4] else review[3])
     )
     return title
+
 
 async def render_sidebar(conn):
     with st.sidebar:
@@ -219,14 +242,12 @@ def create_review_form() -> ReviewFormInputs:
     col1, col2 = st.columns([1, 2])
 
     form_options = FormOptions()
-    
+
     with col1:
         prompt_template = st.selectbox(
-            "Review Template", 
-            form_options.prompt_templates, 
-            index=0
+            "Review Template", form_options.prompt_templates, index=0
         )
-        
+
         model = st.selectbox(
             "LLM Model",
             form_options.models,
@@ -234,10 +255,7 @@ def create_review_form() -> ReviewFormInputs:
         )
 
     with col2:
-        custom_instructions = st.text_area(
-            "Custom Instructions (Optional)", 
-            height=125
-        )
+        custom_instructions = st.text_area("Custom Instructions (Optional)", height=125)
 
     # Options in columns
     col1, col2 = st.columns(2)
@@ -256,11 +274,13 @@ def create_review_form() -> ReviewFormInputs:
         stream_output=stream_output,
         per_file_analysis=per_file_analysis,
         analyze_whole_file=analyze_whole_file,
-        ignore_tests=ignore_tests
+        ignore_tests=ignore_tests,
     )
 
 
-def create_review_config(form_inputs: ReviewFormInputs, diffs: DiffData) -> ReviewConfig:
+def create_review_config(
+    form_inputs: ReviewFormInputs, diffs: DiffData
+) -> ReviewConfig:
     """Create a review configuration from form inputs."""
     url_type = get_github_url_type(diffs)
     return ReviewConfig(
@@ -271,13 +291,12 @@ def create_review_config(form_inputs: ReviewFormInputs, diffs: DiffData) -> Revi
         prompt_template_selected=form_inputs.prompt_template,
         selected_model=form_inputs.model,
         stream_checked=form_inputs.stream_output,
-        
         # Metadata
         review_id=None,
         repo_name=diffs.repo_name,
         url=form_inputs.url,
         url_type=url_type,
-        created_at=datetime.now()
+        created_at=datetime.now(),
     )
 
 
@@ -286,24 +305,27 @@ async def render_create_review_page(conn):
     with st.container():
         with st.expander("Create Review", expanded=True):
             col1, col2 = st.columns([5, 1.2])
-            
+
             with col1:
                 form_inputs = create_review_form()
-            
+
             with col2:
-                st.markdown('<div style="margin-top: 25px;"></div>', unsafe_allow_html=True)
-                start_review = st.button("Review", type="primary", use_container_width=True)
+                st.markdown(
+                    '<div style="margin-top: 25px;"></div>', unsafe_allow_html=True
+                )
+                start_review = st.button(
+                    "Review", type="primary", use_container_width=True
+                )
 
     # Process review outside of the panel
     if start_review:
         with st.spinner("Processing..."):
             diffs = fetch_git_diffs(
-                form_inputs.url, 
-                ignore_tests=form_inputs.ignore_tests
+                form_inputs.url, ignore_tests=form_inputs.ignore_tests
             )
-            
+
             review_config = create_review_config(form_inputs, diffs)
-            
+
             # Insert review into database
             review_config.review_id = insert_review(
                 conn,
@@ -320,7 +342,7 @@ async def render_create_review_page(conn):
                 diffs=diffs,
                 config=review_config,  # Now using the correct config structure
                 conn=conn,
-                review_id=review_config.review_id
+                review_id=review_config.review_id,
             )
 
 
@@ -331,7 +353,9 @@ def get_individual_patches(diffs: DiffData) -> Tuple[List[str], List[str]]:
 
 def get_combined_patches(diffs: DiffData) -> Tuple[List[str], List[str]]:
     """Combine all patches into a single patch."""
-    combined_patch = "\n".join([f"{patch}" for fname, patch in zip(diffs.file_names, diffs.patches)])
+    combined_patch = "\n".join(
+        [f"{patch}" for fname, patch in zip(diffs.file_names, diffs.patches)]
+    )
     return [combined_patch], ["Combined Files"]
 
 
@@ -342,7 +366,7 @@ async def render_patch_section(
     review_id: str,
     file_name: str,
     patch: str,
-    idx: int
+    idx: int,
 ) -> None:
     """Render a section for a single patch including code view and analysis."""
     with st.expander(f"📁 {file_name}", expanded=True):
@@ -350,15 +374,7 @@ async def render_patch_section(
         with col1:
             await render_code_view(diffs, patch, file_name, config, idx)
         with col2:
-            await render_analysis(
-                diffs,
-                config,
-                conn,
-                review_id,
-                file_name,
-                patch,
-                idx
-            )
+            await render_analysis(diffs, config, conn, review_id, file_name, patch, idx)
 
 
 async def render_analysis(
@@ -372,7 +388,7 @@ async def render_analysis(
 ) -> None:
     """Render AI analysis with better formatting and error handling."""
     sys_out = st.empty()
-    
+
     try:
         # Create context object
         context = AnalysisContext(
@@ -383,32 +399,28 @@ async def render_analysis(
             file_name=file_name,
             patch=patch,
             idx=idx,
-            sys_out=sys_out
+            sys_out=sys_out,
         )
-        
+
         # Configure model
         model_config = ModelConfig.from_model_name(config.selected_model)
-        
+
         # Generate analysis
         response = await generate_analysis(context, model_config)
-        
+
         # Save results
         save_analysis(context, response)
-        
+
         # Render response
         key = f"ai_comment_{idx}"
         await render_response(response, key, sys_out)
-        
+
     except Exception as e:
         st.error(f"Error during analysis: {str(e)}")
         raise
 
 
-async def render_response(
-    content: str,
-    key: str,
-    sys_out: Any
-) -> None:
+async def render_response(content: str, key: str, sys_out: Any) -> None:
     """Render the analysis response in the UI."""
     sys_out.empty()
 
@@ -444,7 +456,9 @@ async def render_view_review_page(conn):
         with hcol2:
             if st.button("🗑️", key=f"delete-{review[0]}", use_container_width=True):
                 delete_review(conn, review[0])
-                st.session_state.selected_review_id = None  # Reset to trigger new review screen
+                st.session_state.selected_review_id = (
+                    None  # Reset to trigger new review screen
+                )
                 st.rerun()
         # st.divider()
         st.markdown('<div class="compact-divider"><hr/></div>', unsafe_allow_html=True)

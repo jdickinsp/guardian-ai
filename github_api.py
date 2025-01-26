@@ -32,6 +32,7 @@ FolderDiff = namedtuple(
     ["repo_name", "base_branch", "compare_branch", "file_names", "patches", "contents"],
 )
 
+
 class GitHubURLType(Enum):
     BRANCH = "branch"
     FOLDER_PATH = "folder_path"
@@ -41,6 +42,7 @@ class GitHubURLType(Enum):
     COMMIT = "commit"
     BRANCH_OR_FOLDER = "branch_or_folder"
     UNKNOWN = "unknown"
+
 
 def get_github_url_type(diff):
     if isinstance(diff, BranchDiff):
@@ -54,6 +56,7 @@ def get_github_url_type(diff):
     elif isinstance(diff, FolderDiff):
         return GitHubURLType.FOLDER_PATH.value
     return None
+
 
 class GitHubAPI:
     def __init__(self, github_token: str):
@@ -142,7 +145,7 @@ class GitHubURLIdentifier:
                 "commit_hash": commit_hash,
             }
         return None
-    
+
     @staticmethod
     def extract_repo_and_branch_name(url: str) -> Optional[Dict[str, str]]:
         """
@@ -158,12 +161,8 @@ class GitHubURLIdentifier:
         match = re.match(pattern, url)
         if match:
             owner, repo, branch = match.groups()
-            return {
-                "repo_name": f"{owner}/{repo}",
-                "branch_name": branch
-            }
+            return {"repo_name": f"{owner}/{repo}", "branch_name": branch}
         return None
-
 
 
 class GitHubRepoHelper:
@@ -222,7 +221,9 @@ class GitHubRepoHelper:
             for branch_name in branches:
                 if branch_name in branch_or_path:
                     branch = branch_name
-                    extracted_path = GitHubRepoHelper.extract_path_from_branch(branch_name, branch_or_path)
+                    extracted_path = GitHubRepoHelper.extract_path_from_branch(
+                        branch_name, branch_or_path
+                    )
                     if url_type == GitHubURLType.FOLDER_PATH:
                         path = extracted_path
                     elif url_type == GitHubURLType.FILE_PATH:
@@ -250,13 +251,13 @@ class GitHubRepoHelper:
     @staticmethod
     def extract_path_from_branch(branch_name: str, url_path: str) -> str:
         """
-        Extracts the correct file or folder path from a GitHub URL, ensuring the branch name 
+        Extracts the correct file or folder path from a GitHub URL, ensuring the branch name
         is removed only if it's a valid prefix in the path.
-        
+
         Args:
             branch_name (str): The name of the GitHub branch.
             url_path (str): The URL path that may contain the branch name.
-            
+
         Returns:
             str: The extracted path after removing the branch name if applicable.
         """
@@ -390,7 +391,7 @@ class GitHubDiffFetcher:
             return FileDiff(
                 repo_name, base_branch, branch, filenames, contents, contents
             )
-        
+
         file = None
         comparison = repo.compare(base_branch, branch)
         for comp_file in comparison.files:

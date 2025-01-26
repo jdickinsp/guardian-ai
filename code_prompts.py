@@ -145,12 +145,12 @@ CODE_PROMPTS = {
         "system_prompt": CODE_REVIEW_PROMPT,
         "options": CODE_REVIEW_SETTINGS,
     },
-   "dependency-order": {
+    "dependency-order": {
         "type": "refactor",
         "system_prompt": DEPENDENCY_ORDER_PROMPT,
         "options": DEFAULT_PROMPT_OPTIONS,
     },
-   "review-by-context": {
+    "review-by-context": {
         "type": "refactor",
         "system_prompt": REVIEW_BY_CONTEXT_PROMPT,
         "options": DEFAULT_PROMPT_OPTIONS,

@@ -82,7 +82,9 @@ def create_tables(conn):
         raise Error(f"Database error: {e}")
 
 
-def insert_review(conn, name, github_url, github_url_type, prompt_template, prompt, llm_model):
+def insert_review(
+    conn, name, github_url, github_url_type, prompt_template, prompt, llm_model
+):
     """Insert a new review into the reviews table"""
     try:
         if name is None:
@@ -93,7 +95,15 @@ def insert_review(conn, name, github_url, github_url_type, prompt_template, prom
         cur = conn.cursor()
         cur.execute(
             sql_insert_review,
-            (review_id, name, github_url, github_url_type, prompt_template, prompt, llm_model),
+            (
+                review_id,
+                name,
+                github_url,
+                github_url_type,
+                prompt_template,
+                prompt,
+                llm_model,
+            ),
         )
         conn.commit()
         return review_id

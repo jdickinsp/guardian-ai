@@ -18,6 +18,7 @@ with open("./views/style.css") as f:
         unsafe_allow_html=True,
     )
 
+
 def init_session_state():
     if "url_input" not in st.session_state:
         st.session_state.url_input = ""
@@ -28,9 +29,10 @@ def init_session_state():
     if "has_run" not in st.session_state:
         st.session_state.has_run = False
 
+
 async def main():
     init_session_state()
-    
+
     conn = create_connection("bin/code_reviews.db")
     if conn is None:
         st.error("Database connection failed!")
@@ -50,6 +52,7 @@ async def main():
 
     if conn:
         conn.close()
+
 
 if __name__ == "__main__":
     asyncio.run(main())

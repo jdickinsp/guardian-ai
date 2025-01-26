@@ -9,6 +9,7 @@ from anthropic import Anthropic, AsyncAnthropic
 
 DEFAULT_TEMPERATURE = 0.6
 
+
 class LLMType(Enum):
     OLLAMA = "ollama"
     OPENAI = "openai"
@@ -18,15 +19,15 @@ class LLMType(Enum):
 def get_available_models():
     """Return a list of available LLM models."""
     return [
-        "o1-mini", # OpenAI,
-        "gpt-4o-mini",  
+        "o1-mini",  # OpenAI,
+        "gpt-4o-mini",
         "gpt-4o",
         "claude-3-5-sonnet-latest",  # Anthropic
         "claude-3-haiku-20240307",
         "llama3.1",  # Ollama
         "llama3.2",
         "deepseek-r1:8b",
-        "deepseek-r1:14b"
+        "deepseek-r1:14b",
     ]
 
 
@@ -114,19 +115,21 @@ class OllamaClient(LLMClient):
 
     def get_messages(self, system_prompt, user_message):
         messages = []
-        if 'llama' in self.model_name:
+        if "llama" in self.model_name:
             messages = [
                 {
-                    'role': 'system',
-                    'content': system_prompt,
+                    "role": "system",
+                    "content": system_prompt,
                 },
                 {
-                    'role': 'user',
-                    'content': user_message,
+                    "role": "user",
+                    "content": user_message,
                 },
             ]
         else:
-            messages.append({"role": "user", "content": system_prompt + "  \n" + user_message})
+            messages.append(
+                {"role": "user", "content": system_prompt + "  \n" + user_message}
+            )
         return messages
 
     async def async_chat(self, system_prompt, user_message, prompt_options):

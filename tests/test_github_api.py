@@ -72,10 +72,8 @@ def test_identify_github_url_type(mock_github_api):
 
     for url, expected_type in cases:
         assert (
-            GitHubURLIdentifier.identify_github_url_type(
-                mock_github_api,
-                url
-            ) == expected_type
+            GitHubURLIdentifier.identify_github_url_type(mock_github_api, url)
+            == expected_type
         ), f"Failed for URL: {url}"
 
 
@@ -309,13 +307,15 @@ def test_identify_github_url_type_with_query_params():
     assert (
         GitHubURLIdentifier.identify_github_url_type(
             mock_github_api, "https://github.com/owner/repo/pull/123?diff=split"
-        ) == GitHubURLType.PULL_REQUEST
+        )
+        == GitHubURLType.PULL_REQUEST
     )
     assert (
         GitHubURLIdentifier.identify_github_url_type(
             mock_github_api,
             "https://github.com/owner/repo/commit/1234567890abcdef1234567890abcdef12345678?diff=split",
-        ) == GitHubURLType.COMMIT
+        )
+        == GitHubURLType.COMMIT
     )
 
 
@@ -324,13 +324,15 @@ def test_identify_github_url_type_with_anchor():
         GitHubURLIdentifier.identify_github_url_type(
             mock_github_api,
             "https://github.com/owner/repo/pull/123#discussion_r1234567890",
-        ) == GitHubURLType.PULL_REQUEST
+        )
+        == GitHubURLType.PULL_REQUEST
     )
     assert (
         GitHubURLIdentifier.identify_github_url_type(
             mock_github_api,
             "https://github.com/owner/repo/commit/1234567890abcdef1234567890abcdef12345678#diff-1234567890abcdef1234567890abcdef12345678",
-        ) == GitHubURLType.COMMIT
+        )
+        == GitHubURLType.COMMIT
     )
 
 
