@@ -4,9 +4,9 @@ import os
 import sys
 from dotenv import load_dotenv
 
-from chat_client import ChatClient
-from llm_client import LLMType, string_to_enum, get_default_llm_model_name
-from github_api import fetch_git_diffs
+from lemma.chat_client import ChatClient
+from lemma.llm_client import LLMType, string_to_enum, get_default_llm_model_name
+from lemma.github_api import fetch_git_diffs
 
 
 async def process_stream(stream, output, client_type):

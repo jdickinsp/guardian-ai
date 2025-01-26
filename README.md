@@ -62,7 +62,7 @@ python cli.py --url=https://github.com/karpathy/llm.c/commit/8cf66fbb845665dabac
 
 Run the webapp:
 ```
-python -m streamlit run app.py
+python -m streamlit run ./lemma/app.py
 ```
 
 ## Running Test Coverage

@@ -1,7 +1,7 @@
 import pytest
 from unittest.mock import patch, MagicMock, AsyncMock
-from chat_client import ChatClient, ChatPrompt, LLMType
-from code_prompts import (
+from lemma.chat_client import ChatClient, ChatPrompt, LLMType
+from lemma.code_prompts import (
     DEFAULT_PROMPT_OPTIONS,
     CODE_PROMPTS,
     SYSTEM_PROMPT_DIFF_ENDING,
@@ -11,16 +11,16 @@ from code_prompts import (
 
 @pytest.fixture
 def chat_client():
-    with patch("chat_client.OpenAIClient"), patch("chat_client.OllamaClient"), patch(
-        "chat_client.ClaudeClient"
-    ):
+    with patch("lemma.chat_client.OpenAIClient"), patch(
+        "lemma.chat_client.OllamaClient"
+    ), patch("lemma.chat_client.ClaudeClient"):
         return ChatClient(LLMType.OPENAI, "gpt-3.5-turbo")
 
 
 def test_chat_client_init():
-    with patch("chat_client.OpenAIClient") as mock_openai, patch(
-        "chat_client.OllamaClient"
-    ) as mock_ollama, patch("chat_client.ClaudeClient") as mock_claude:
+    with patch("lemma.chat_client.OpenAIClient") as mock_openai, patch(
+        "lemma.chat_client.OllamaClient"
+    ) as mock_ollama, patch("lemma.chat_client.ClaudeClient") as mock_claude:
 
         client = ChatClient(LLMType.OPENAI, "gpt-3.5-turbo")
         assert client.client_type == LLMType.OPENAI

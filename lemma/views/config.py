@@ -3,7 +3,7 @@ from datetime import datetime
 import os
 from typing import List, Optional, Any
 
-from llm_client import LLMType, string_to_enum
+from lemma.llm_client import LLMType, string_to_enum
 
 
 @dataclass

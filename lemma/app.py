@@ -1,13 +1,13 @@
 import asyncio
 import streamlit as st
-from views.ui import (
+from lemma.views.ui import (
     render_create_review_page,
     render_project_home_page,
     render_sidebar,
     render_view_review_page,
     render_projects_page,
 )
-from db import create_connection, db_init
+from lemma.db import create_connection, db_init
 
 # Set page configuration
 st.set_page_config(
@@ -18,7 +18,7 @@ st.set_page_config(
 )
 
 # Custom CSS for better UI
-with open("./views/style.css") as f:
+with open("./lemma/views/style.css") as f:
     st.markdown(
         f"<style>{f.read()}</style>",
         unsafe_allow_html=True,

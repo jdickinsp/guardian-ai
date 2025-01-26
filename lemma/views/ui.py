@@ -11,10 +11,21 @@ from db import (
     get_review_with_files,
     insert_review,
 )
-from views.forms import FormOptions, ReviewFormInputs
-from views.processing import generate_analysis, get_patches, save_project, save_review
-from views.config import AnalysisContext, ModelConfig, Project, ReviewConfig, DiffData
-from views.html_templates import (
+from lemma.views.forms import FormOptions, ReviewFormInputs
+from lemma.views.processing import (
+    generate_analysis,
+    get_patches,
+    save_project,
+    save_review,
+)
+from lemma.views.config import (
+    AnalysisContext,
+    ModelConfig,
+    Project,
+    ReviewConfig,
+    DiffData,
+)
+from lemma.views.html_templates import (
     DIFF_VIEWER_HTML_CONTENT,
     CODE_HIGHLIGHT_HTML_CONTENT,
     MERMAID_HTML_CONTENT,

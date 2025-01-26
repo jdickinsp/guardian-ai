@@ -1,7 +1,7 @@
 import pytest
 import sqlite3
 import os
-from db import (
+from lemma.db import (
     create_connection,
     create_tables,
     insert_review,

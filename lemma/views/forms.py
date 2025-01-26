@@ -2,8 +2,8 @@ from dataclasses import dataclass, field
 from datetime import datetime
 from typing import List, Optional
 import streamlit as st
-from views.config import ReviewConfig, DiffData
-from llm_client import get_available_models
+from lemma.views.config import ReviewConfig, DiffData
+from lemma.llm_client import get_available_models
 
 
 @dataclass

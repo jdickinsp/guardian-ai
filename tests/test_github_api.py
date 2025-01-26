@@ -1,7 +1,7 @@
 import pytest
 from unittest.mock import ANY, Mock, patch, MagicMock
 from github import GithubException
-from github_api import (
+from lemma.github_api import (
     GitHubURLIdentifier,
     GitHubRepoHelper,
     GitHubDiffFetcher,
@@ -16,7 +16,7 @@ from github_api import (
 
 @pytest.fixture
 def mock_github_api():
-    with patch("github_api.GitHubAPI") as mock_api:
+    with patch("lemma.github_api.GitHubAPI") as mock_api:
         # Configure the mock to return False for is_branch by default
         mock_api.return_value.is_branch.return_value = False
         yield mock_api.return_value
@@ -138,14 +138,14 @@ def test_fetch_git_diffs_invalid_url():
         fetch_git_diffs("https://invalid.url")
 
 
-@patch("github_api.os.getenv")
+@patch("lemma.github_api.os.getenv")
 def test_github_api_init(mock_getenv):
     mock_getenv.return_value = "fake_token"
     github_api = GitHubAPI("fake_token")
     assert github_api.github is not None
 
 
-@patch("github_api.os.getenv")
+@patch("lemma.github_api.os.getenv")
 def test_github_api_init_no_token(mock_getenv):
     mock_getenv.return_value = None
     with pytest.raises(ValueError, match="GitHub token not provided"):
@@ -353,10 +353,10 @@ def test_extract_repo_and_commit_hash_with_query_params():
     }
 
 
-@patch("github_api.GitHubDiffFetcher")
-@patch("github_api.GitHubRepoHelper.get_github_info_from_url")
-@patch("github_api.GitHubURLIdentifier.identify_github_url_type")
-@patch("github_api.os.getenv")
+@patch("lemma.github_api.GitHubDiffFetcher")
+@patch("lemma.github_api.GitHubRepoHelper.get_github_info_from_url")
+@patch("lemma.github_api.GitHubURLIdentifier.identify_github_url_type")
+@patch("lemma.github_api.os.getenv")
 def test_fetch_git_diffs_pull_request(
     mock_getenv, mock_identify_url_type, mock_get_github_info, mock_fetcher
 ):
@@ -445,12 +445,12 @@ def test_get_file_content(mock_diff_fetcher):
 # Add more tests for other methods in GitHubDiffFetcher
 
 
-@patch("github_api.GitHubAPI")
-@patch("github_api.GitHubDiffFetcher")
-@patch("github_api.GitHubRepoHelper.get_github_info_from_url")
-@patch("github_api.GitHubURLIdentifier.identify_github_url_type")
-@patch("github_api.GitHubURLIdentifier.extract_repo_and_commit_hash")
-@patch("github_api.GitHubURLIdentifier.extract_repo_and_pr_number")
+@patch("lemma.github_api.GitHubAPI")
+@patch("lemma.github_api.GitHubDiffFetcher")
+@patch("lemma.github_api.GitHubRepoHelper.get_github_info_from_url")
+@patch("lemma.github_api.GitHubURLIdentifier.identify_github_url_type")
+@patch("lemma.github_api.GitHubURLIdentifier.extract_repo_and_commit_hash")
+@patch("lemma.github_api.GitHubURLIdentifier.extract_repo_and_pr_number")
 def test_fetch_git_diffs(
     mock_extract_pr,
     mock_extract_commit,

@@ -4,8 +4,8 @@ from unittest.mock import patch, MagicMock, AsyncMock
 from io import StringIO
 import sys
 
-from cli import process_stream, cli
-from llm_client import LLMType
+from lemma.cli import process_stream, cli
+from lemma.llm_client import LLMType
 
 
 @pytest.mark.asyncio
@@ -45,10 +45,10 @@ async def test_process_stream_claude():
 
 
 @pytest.mark.asyncio
-@patch("cli.load_dotenv")
-@patch("cli.argparse.ArgumentParser")
-@patch("cli.fetch_git_diffs")
-@patch("cli.ChatClient")
+@patch("lemma.cli.load_dotenv")
+@patch("lemma.cli.argparse.ArgumentParser")
+@patch("lemma.cli.fetch_git_diffs")
+@patch("lemma.cli.ChatClient")
 @patch.dict(
     os.environ,
     {

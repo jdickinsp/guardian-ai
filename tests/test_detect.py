@@ -1,5 +1,5 @@
 import pytest
-from detect import (
+from lemma.detect import (
     get_line_count,
     get_code_height,
     get_programming_language,

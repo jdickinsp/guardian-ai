@@ -1,9 +1,9 @@
 from typing import Tuple, List, Any
 import streamlit as st
-from views.config import DiffData, AnalysisContext, ModelConfig, Project
-from llm_client import LLMType
-from chat_client import ChatClient
-from db import insert_file, insert_project
+from lemma.views.config import DiffData, AnalysisContext, ModelConfig, Project
+from lemma.llm_client import LLMType
+from lemma.chat_client import ChatClient
+from lemma.db import insert_file, insert_project
 
 
 async def process_stream_response(

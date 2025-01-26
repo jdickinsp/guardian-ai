@@ -10,7 +10,7 @@ from github import Github, Auth
 from github.Repository import Repository
 from github.ContentFile import ContentFile
 
-from detect import is_ignored_file, is_test_file
+from lemma.detect import is_ignored_file, is_test_file
 
 BranchDiff = namedtuple(
     "BranchDiff",

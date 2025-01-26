@@ -1,6 +1,6 @@
 import pytest
 from unittest.mock import Mock, AsyncMock, patch
-from llm_client import (
+from lemma.llm_client import (
     LLMType,
     string_to_enum,
     get_default_llm_model_name,
@@ -35,8 +35,8 @@ def test_get_default_llm_model_name():
         get_default_llm_model_name("invalid")
 
 
-@patch("llm_client.AsyncOpenAI")
-@patch("llm_client.OpenAI")
+@patch("lemma.llm_client.AsyncOpenAI")
+@patch("lemma.llm_client.OpenAI")
 def test_openai_client(mock_openai, mock_async_openai):
     client = OpenAIClient("gpt-4")
 
@@ -65,8 +65,8 @@ def test_openai_client(mock_openai, mock_async_openai):
     asyncio.run(async_test())
 
 
-@patch("llm_client.ollama.AsyncClient")
-@patch("llm_client.ollama.Client")
+@patch("lemma.llm_client.ollama.AsyncClient")
+@patch("lemma.llm_client.ollama.Client")
 def test_ollama_client(mock_ollama_client, mock_async_ollama_client):
     client = OllamaClient("llama2")
 
@@ -99,8 +99,8 @@ def test_ollama_client(mock_ollama_client, mock_async_ollama_client):
     asyncio.run(async_test())
 
 
-@patch("llm_client.AsyncAnthropic")
-@patch("llm_client.Anthropic")
+@patch("lemma.llm_client.AsyncAnthropic")
+@patch("lemma.llm_client.Anthropic")
 @patch.dict("os.environ", {"ANTHROPIC_API_KEY": "test_key"})
 @pytest.mark.asyncio
 async def test_claude_client(mock_anthropic, mock_async_anthropic):
