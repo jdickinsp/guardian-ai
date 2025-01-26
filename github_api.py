@@ -222,10 +222,11 @@ class GitHubRepoHelper:
             for branch_name in branches:
                 if branch_name in branch_or_path:
                     branch = branch_name
+                    extracted_path = GitHubRepoHelper.extract_path_from_branch(branch_name, branch_or_path)
                     if url_type == GitHubURLType.FOLDER_PATH:
-                        path = branch_or_path.replace(branch_name, "")
+                        path = extracted_path
                     elif url_type == GitHubURLType.FILE_PATH:
-                        file_path = branch_or_path.replace(branch_name, "")
+                        file_path = extracted_path
                     break
         elif (
             url_type == GitHubURLType.COMMIT
@@ -245,6 +246,26 @@ class GitHubRepoHelper:
             "file_path": file_path,
             "url_type": url_type,
         }
+
+    @staticmethod
+    def extract_path_from_branch(branch_name: str, url_path: str) -> str:
+        """
+        Extracts the correct file or folder path from a GitHub URL, ensuring the branch name 
+        is removed only if it's a valid prefix in the path.
+        
+        Args:
+            branch_name (str): The name of the GitHub branch.
+            url_path (str): The URL path that may contain the branch name.
+            
+        Returns:
+            str: The extracted path after removing the branch name if applicable.
+        """
+        if url_path.startswith(branch_name + "/"):
+            extracted_path = url_path[len(branch_name) + 1 :]
+        else:
+            extracted_path = url_path  # Return the original path if no proper match
+
+        return extracted_path
 
 
 class GitHubDiffFetcher:
