@@ -3,5 +3,5 @@ PyGithub==2.4.0
 requests==2.32.3
 ollama==0.3.3
 python-dotenv
-streamlit==1.33.0
+streamlit==1.41.0
 anthropic

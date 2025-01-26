@@ -4,12 +4,6 @@ section[data-testid="stSidebar"] {
     background-color: #f8f9fa;
 }
 
-section[data-testid="stSidebar"]>div {
-    padding-top: 0.5rem;
-    padding-left: 0.25rem !important;
-    padding-right: 0.25rem !important;
-    padding-bottom: 1rem;
-}
 
 /* Add specific styling for sidebar header */
 section[data-testid="stSidebar"] h3:first-of-type {
@@ -18,7 +12,7 @@ section[data-testid="stSidebar"] h3:first-of-type {
 }
 
 /* Hide Streamlit branding */
-.stDeployButton {
+.stAppDeployButton {
     display: none;
 }
 
@@ -32,18 +26,18 @@ footer {
     /* Increased top padding from 1em to 2em */
 }
 
-/* Card-like containers */
+/* Card-like buttons */
 .stButton>button {
     border-radius: 4px;
     padding: 0.5rem 1rem;
 }
 
-/* Add new CSS for specific buttons */
+/* Specific button styling */
 .small-button>button {
     width: auto !important;
 }
 
-/* Review items styling */
+/* Review items */
 .review-item {
     padding: 0.5rem;
     border-radius: 4px;
@@ -52,12 +46,12 @@ footer {
     border: 1px solid #e1e4e8;
 }
 
-/* Input fields styling */
+/* Input fields */
 .stTextInput input {
     border-radius: 4px;
 }
 
-/* Tabs styling */
+/* Tabs */
 .stTabs [data-baseweb="tab-list"] {
     gap: 2rem;
 }
@@ -80,14 +74,14 @@ pre {
     background-color: #f6f8fa;
 }
 
-/* Force left alignment for button content */
+/* Sidebar buttons alignment */
 section[data-testid="stSidebar"] div:nth-of-type(2) [data-testid="stHorizontalBlock"] [data-testid="column"] button div {
     justify-content: flex-start !important;
     text-align: left !important;
 }
 
-/* Individual button styling */
-section[data-testid="stSidebar"] div:nth-of-type(2) [data-testid="stHorizontalBlock"] [data-testid="column"] button {
+/* Individual sidebar buttons */
+section[data-testid="stSidebar"] div:nth-of-type(2) [data-testid="stHorizontalBlock"] [data-testid="stButton"] button {
     text-align: left !important;
     padding: 0.50rem 0rem !important;
     min-height: 0 !important;
@@ -99,7 +93,7 @@ section[data-testid="stSidebar"] div:nth-of-type(2) [data-testid="stHorizontalBl
     border: 0px solid #e1e4e8 !important;
 }
 
-/* Remove extra spacing from column containers */
+/* Remove spacing from column containers */
 section[data-testid="stSidebar"] div:nth-of-type(2) [data-testid="stHorizontalBlock"]>div {
     margin: 0 !important;
     padding: 0 !important;
@@ -114,4 +108,33 @@ section[data-testid="stSidebar"] div:nth-of-type(2) [data-testid="stVerticalBloc
 .compact-divider hr {
     margin-top: 0.1rem !important;
     margin-bottom: 0.1rem !important;
+}
+
+div[data-testid="stSidebarHeader"] {
+    padding-top: 0.5em;
+    padding-right: 0.2em;
+    /* padding-right: 0.5em; */
+}
+
+div[data-testid="stSidebarCollapsedControl"] {
+    top: 0.5em;
+    left: 0.2em;
+}
+
+.stAppHeader {
+    margin-top: 0em;
+    margin-bottom: 0em;
+    height: 3rem;
+}
+
+.stAppToolbar {
+    top: 0.5em;
+    right: 0.2em;
+}
+
+.stMainBlockContainer {
+    padding-left: 2rem;
+    padding-right: 2rem;
+    padding-top: 2em;
+    padding-bottom: 2em;
 }
