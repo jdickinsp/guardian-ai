@@ -108,6 +108,15 @@ def create_tables(conn):
         raise Error(f"Database error: {e}")
 
 
+def get_dict_results(cur, rows):
+    columns = [desc[0] for desc in cur.description]
+    if not isinstance(rows, list):
+        result = dict(zip(columns, rows))
+    else:
+        result = [dict(zip(columns, row)) for row in rows]
+    return result
+
+
 def insert_review(
     conn,
     name,
@@ -206,7 +215,7 @@ def get_all_reviews(conn):
         cur = conn.cursor()
         cur.execute("SELECT * FROM reviews order by reviews.created_at DESC")
         rows = cur.fetchall()
-        return rows
+        return get_dict_results(cur, rows)
     except Error as e:
         raise Error(f"Database error: {e}")
 
@@ -220,12 +229,13 @@ def get_review_with_files(conn, review_id):
         # Fetch the review
         cur.execute("SELECT * FROM reviews WHERE id=?", (review_id,))
         review = cur.fetchone()
+        review_results = get_dict_results(cur, review)
 
         if review:
             # Fetch associated files
             cur.execute("SELECT * FROM files WHERE review_id=?", (review_id,))
             files = cur.fetchall()
-            return review, files
+            return review_results, get_dict_results(cur, files)
         else:
             print("Review not found")
             return None, None
@@ -259,6 +269,19 @@ def get_all_project_reviews(conn, project_id):
         )
         rows = cur.fetchall()
         return rows
+    except Error as e:
+        raise Error(f"Database error: {e}")
+
+
+def get_project(conn, project_id):
+    """
+    Query all rows in the projects table
+    """
+    try:
+        cur = conn.cursor()
+        cur.execute("SELECT * FROM projects where project.id=?", (project_id,))
+        row = cur.fetchone()
+        return row
     except Error as e:
         raise Error(f"Database error: {e}")
 

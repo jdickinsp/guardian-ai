@@ -184,21 +184,25 @@ def format_html_with_scrollbars(content: str) -> str:
 
 def get_review_title(review):
     limit = 12
-    if review[8]:
-        if review[8] == "file_path":
-            return review[3] + " " + review[2].split("/")[-1][:limit]
-        elif review[8] == "folder_path":
-            return review[3] + " /" + review[2].split("/")[-1][:limit]
-        elif review[8] == "branch":
-            return review[3] + " " + review[2].split("/")[-1][:limit]
-        elif review[8] == "pull_request":
-            return review[3] + " pull/" + review[2].split("/")[-1][:limit]
-        elif review[8] == "commit":
-            return review[3] + " " + review[2].split("/")[-1][:limit]
+    github_url = review["github_url"]
+    github_url_type = review["github_url_type"]
+    prompt_template = review["prompt_template"]
+    prompt = review["prompt"]
+    if github_url_type:
+        if github_url_type == "file_path":
+            return prompt_template + " " + github_url.split("/")[-1][:limit]
+        elif github_url_type == "folder_path":
+            return prompt_template + " /" + github_url.split("/")[-1][:limit]
+        elif github_url_type == "branch":
+            return prompt_template + " " + github_url.split("/")[-1][:limit]
+        elif github_url_type == "pull_request":
+            return prompt_template + " pull/" + github_url.split("/")[-1][:limit]
+        elif github_url_type == "commit":
+            return prompt_template + " " + github_url.split("/")[-1][:limit]
     title = (
-        review[4][:22] + "..."
-        if review[4] and len(review[4]) > 22
-        else (review[4] if review[4] else review[3])
+        prompt[:20] + "..."
+        if prompt and len(prompt) > 20
+        else (prompt if prompt else prompt_template)
     )
     return title
 
@@ -226,9 +230,9 @@ async def render_sidebar(conn):
             cols = st.columns([10])
             title = get_review_title(review)
             if cols[0].button(
-                f"📄 {title}", key=f"review-{review[0]}", use_container_width=True
+                f"📄 {title}", key=f"review-{review['id']}", use_container_width=True
             ):
-                st.session_state.selected_review_id = review[0]
+                st.session_state.selected_review_id = review["id"]
                 st.session_state.current_view = "review"
                 st.rerun()
 
@@ -453,9 +457,9 @@ async def render_view_review_page(conn):
         # Review header
         hcol1, hcol2 = st.columns([19, 1])  # 80/20 split
         with hcol1:
-            st.markdown(f"### {review[1]}")
+            st.markdown(f"### {review['name']}")
         with hcol2:
-            if st.button("🗑️", key=f"delete-{review[0]}", use_container_width=False):
+            if st.button("🗑️", key=f"delete-{review['id']}", use_container_width=False):
                 delete_review(conn, review[0])
                 st.session_state.selected_review_id = None
                 st.session_state.current_view = "home"
@@ -465,19 +469,19 @@ async def render_view_review_page(conn):
         # Review header
         st.markdown(
             f"""
-            **GitHub URL:** [{review[2]}]({review[2]})  
-            **Template:** {review[3] or 'Custom'}  
-            **Model:** {review[7] if review[7] else 'N/A'}  
-            **Prompt:** {review[4] if review[4] else 'None'}
+            **GitHub URL:** [{review['github_url']}]({review['github_url']})  
+            **Template:** {review['prompt_template'] or 'Custom'}  
+            **Model:** {review['llm_model'] if review['llm_model'] else 'N/A'}  
+            **Prompt:** {review['prompt'] if review['prompt'] else 'None'}
         """
         )
         # Process files
-        filenames = [f[2] for f in files]
-        patches = [f[3] for f in files]
-        contents = [f[4] for f in files]
-        responses = [f[5] for f in files]
+        filenames = [f["file_name"] for f in files]
+        patches = [f["diff"] for f in files]
+        contents = [f["code"] for f in files]
+        responses = [f["response"] for f in files]
 
-    diffs = BranchDiff(review[1], None, None, filenames, patches, contents)
+    diffs = BranchDiff(review["name"], None, None, filenames, patches, contents)
 
     for idx, (patch, response) in enumerate(zip(patches, responses)):
         with st.expander(f"📁 {filenames[idx]}", expanded=True):
@@ -546,6 +550,10 @@ async def render_project_home_page(conn, project_id):
                 st.session_state.selected_review_id = None
                 st.session_state.current_project_id = project_id
                 st.session_state.current_view = "home"
+                st.rerun()
+            if st.button(
+                "Add Embeddings Index", type="secondary", use_container_width=False
+            ):
                 st.rerun()
 
     project_reviews = get_all_project_reviews(conn, project_id)
