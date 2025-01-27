@@ -11,9 +11,32 @@ from github import Github, Repository
 TMP_DIR = Path(__file__).resolve().parent.parent.parent / "tmp"
 
 
-def get_latest_commit_from_github(github_client, repo_owner, repo_name):
+def get_github_client():
+    token = os.getenv("GITHUB_ACCESS_TOKEN")
+    if not token:
+        raise EnvironmentError(
+            "GITHUB_ACCESS_TOKEN is not set in environment variables."
+        )
+    return Github(token)
+
+
+def parse_repo_info_from_github(repo_url: str):
+    # Parse the repository URL to extract owner and repo name
+    parsed_url = urlparse(repo_url)
+    path_parts = parsed_url.path.strip("/").split("/")
+
+    if len(path_parts) < 2:
+        raise ValueError("Invalid GitHub repository URL.")
+
+    owner, repo = path_parts[:2]
+    repo_name = f"{owner}/{repo.replace('.git', '')}"
+    return (owner, repo, repo_name)
+
+
+def get_latest_commit_from_github(repo_owner, repo_name, github_client=None):
     """Get the latest commit SHA from GitHub API."""
-    print(f"{repo_owner}/{repo_name}")
+    if not github_client:
+        github_client = get_github_client()
     repo = github_client.get_repo(f"{repo_owner}/{repo_name}")
     latest_commit = repo.get_branch(repo.default_branch).commit.sha
     return latest_commit
@@ -35,41 +58,31 @@ def clone_github_repo(repo_url: str, dest_dir: Optional[str] = None) -> str:
         ValueError: If the repository URL is invalid.
         Exception: If cloning fails due to API errors or extraction issues.
     """
-    # Parse the repository URL to extract owner and repo name
-    parsed_url = urlparse(repo_url)
-    path_parts = parsed_url.path.strip("/").split("/")
+    owner, repo, repo_name = parse_repo_info_from_github(repo_url)
 
-    if len(path_parts) < 2:
-        raise ValueError("Invalid GitHub repository URL.")
+    github_client = get_github_client()
 
-    owner, repo = path_parts[:2]
-    repo_name = f"{owner}/{repo.replace('.git', '')}"
-
-    # Initialize GitHub API client
-    token = os.getenv("GITHUB_ACCESS_TOKEN")
-    if not token:
-        raise EnvironmentError(
-            "GITHUB_ACCESS_TOKEN is not set in environment variables."
-        )
-
-    g = Github(token)
-
-    latest_commit = get_latest_commit_from_github(g, owner, repo)
+    try:
+        repo_obj: Repository = github_client.get_repo(repo_name)
+    except Exception as e:
+        raise Exception(f"Failed to access repository '{repo_name}': {e}")
 
     # Create destination directory if not provided
     if dest_dir is None:
         dest_dir = TMP_DIR
     os.makedirs(dest_dir, exist_ok=True)
 
-    repo_path_guess = os.path.join(dest_dir, f"{owner}-{repo}-{latest_commit[:7]}")
+    # GitHub's convention is for private repos to include the full commit hash
+    # for more detailed tracking, while public repos use a shortened version.
+    latest_commit = get_latest_commit_from_github(owner, repo, github_client)
+    if repo_obj.private:
+        repo_pattern = f"{owner}-{repo}-{latest_commit}"
+    else:
+        repo_pattern = f"{owner}-{repo}-{latest_commit[:7]}"
+    repo_path_guess = os.path.join(dest_dir, repo_pattern)
     if os.path.exists(repo_path_guess):
         print(f"Repo already exists in {repo_path_guess}")
         return repo_path_guess
-
-    try:
-        repo_obj: Repository = g.get_repo(repo_name)
-    except Exception as e:
-        raise Exception(f"Failed to access repository '{repo_name}': {e}")
 
     # Determine the reference to download (default branch)
     try:
@@ -115,11 +128,11 @@ def clone_github_repo(repo_url: str, dest_dir: Optional[str] = None) -> str:
     os.remove(zip_path)
 
     # The extracted folder typically has a name like 'repo-commithash'
-    extracted_dirs = repo_path_guess in os.listdir(dest_dir)
+    extracted_dirs = repo_pattern in os.listdir(dest_dir)
     if not extracted_dirs:
         raise Exception("Failed to extract the repository archive.")
 
-    repo_extracted_path = os.path.join(dest_dir, repo_path_guess)
+    repo_extracted_path = os.path.join(dest_dir, repo_pattern)
     print(f"Repository cloned to: {repo_extracted_path}")
 
     return repo_extracted_path

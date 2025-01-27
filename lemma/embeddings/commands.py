@@ -3,8 +3,11 @@ import sqlite3
 
 from lemma.db import get_project
 from lemma.embeddings.create_vector_indexes import create_vector_indexes
-from lemma.embeddings.embeddings import create_embeddings
-from lemma.embeddings.manage_repo import clone_github_repo, get_latest_commit_hash
+from lemma.embeddings.manage_repo import (
+    clone_github_repo,
+    get_latest_commit_from_github,
+    parse_repo_info_from_github,
+)
 from lemma.embeddings.segment import segment_codebase
 
 
@@ -37,6 +40,9 @@ def create_embeddings_index(conn: sqlite3.Connection, project_id: str):
         >>> index_file = create_embeddings_index(conn, project_id)
         >>> print(f"Embeddings index saved at: {index_file}")
     """
+    if project_id is None:
+        print("Error: project_id is None")
+        return None
 
     # 1. Look up the project in the database
     project = get_project(conn, project_id)
@@ -44,14 +50,14 @@ def create_embeddings_index(conn: sqlite3.Connection, project_id: str):
         raise ValueError(f"Project with ID {project_id} not found.")
 
     repo_url = project["github_repo_url"]
-    print(f"Cloning repository: {repo_url}")
+    print(f"Attempt to clone repository: {repo_url}")
 
     # 2. Clone GitHub repository
     local_repo_path = clone_github_repo(repo_url)
-    print(f"Repository cloned to: {local_repo_path}")
 
     # 3. Get the latest commit hash
-    latest_commit = get_latest_commit_hash(local_repo_path)
+    owner, repo, _ = parse_repo_info_from_github(repo_url)
+    latest_commit = get_latest_commit_from_github(owner, repo)
     print(f"Latest commit hash: {latest_commit}")
 
     # Save the latest commit hash in the database

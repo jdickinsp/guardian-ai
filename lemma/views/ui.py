@@ -19,6 +19,7 @@ from github_api import (
     validate_github_repo_url,
 )
 
+from lemma.embeddings.commands import create_embeddings_index
 from lemma.views.config import (
     AnalysisContext,
     DiffData,
@@ -536,9 +537,9 @@ async def render_projects_page(conn):
         with st.expander("Your Projects", expanded=True):
             projects = get_all_projects(conn)
             for project in projects:
-                button_title = f"{project[1]} - {project[2]} - {project[0]}"
+                button_title = f"{project['name']} - {project['github_repo_url']} - {project['id']}"
                 if st.button(button_title, use_container_width=True):
-                    st.session_state.current_project_id = project[0]
+                    st.session_state.current_project_id = project["id"]
                     st.session_state.current_view = "project-home"
                     st.rerun()
 
@@ -555,13 +556,17 @@ async def render_project_home_page(conn, project_id):
             if st.button(
                 "Add Embeddings Index", type="secondary", use_container_width=False
             ):
+                st.session_state.current_project_id = project_id
+                create_embeddings_index(conn, project_id)
                 st.rerun()
 
     project_reviews = get_all_project_reviews(conn, project_id)
     with st.container():
         with st.expander(f"Recent Reviews", expanded=True):
             for review in project_reviews:
-                button_title = f"{review[2]} - {review[1]} - {review[0]}"
+                button_title = (
+                    f"{review['github_url']} - {review['name']} - {review['id']}"
+                )
                 if st.button(button_title, use_container_width=True):
                     st.session_state.selected_review_id = review[0]
                     st.session_state.current_view = "review"

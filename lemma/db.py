@@ -25,6 +25,7 @@ def create_tables(conn):
             name TEXT NOT NULL,
             github_repo_url TEXT NOT NULL,
             repo_validated BOOLEAN NOT NULL CHECK (repo_validated IN (0, 1)),
+            latest_commit TEXT,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         );"""
@@ -57,27 +58,13 @@ def create_tables(conn):
             FOREIGN KEY (review_id) REFERENCES reviews (id)
         );"""
 
-        sql_create_repository_embeddings = """
-         CREATE TABLE IF NOT EXISTS repository_embeddings (
-            id TEXT PRIMARY KEY,
-            branch VARCHAR(255) NULL,
-            commit_indexed VARCHAR(50) NULL,
-            last_indexed_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            status VARCHAR(20) NOT NULL CHECK (status IN ('unindexed', 'in_progress', 'indexed')),
-            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            project_id TEXT NULL,
-            FOREIGN KEY (project_id) REFERENCES projects (id)
-         );"""
-
         c = conn.cursor()
         c.execute(sql_create_projects_table)
         c.execute(sql_create_reviews_table)
         c.execute(sql_create_files_table)
-        c.execute(sql_create_repository_embeddings)
 
         # Create triggers to automatically update the updated_at field
-        table_triggers = ["reviews", "files", "projects", "repository_embeddings"]
+        table_triggers = ["reviews", "files", "projects"]
         trigger_template = """
             CREATE TRIGGER IF NOT EXISTS trg_{table}_updated_at
             AFTER UPDATE ON {table}
@@ -98,9 +85,6 @@ def create_tables(conn):
             "CREATE INDEX IF NOT EXISTS idx_reviews_created_at ON reviews (created_at)"
         )
         c.execute("CREATE INDEX IF NOT EXISTS idx_files_review_id ON files(review_id)")
-        c.execute(
-            "CREATE INDEX IF NOT EXISTS idx_repository_embeddings_project_id ON repository_embeddings(project_id)"
-        )
         c.execute(
             "CREATE INDEX IF NOT EXISTS idx_projects_updated_at ON projects (updated_at)"
         )
@@ -280,7 +264,7 @@ def get_all_projects(conn):
         cur = conn.cursor()
         cur.execute("SELECT * FROM projects order by projects.updated_at DESC")
         rows = cur.fetchall()
-        return rows
+        return get_dict_result(cur, rows)
     except Error as e:
         raise Error(f"Database error: {e}")
 
@@ -296,7 +280,7 @@ def get_all_project_reviews(conn, project_id):
             (project_id,),
         )
         rows = cur.fetchall()
-        return rows
+        return get_dict_result(cur, rows)
     except Error as e:
         raise Error(f"Database error: {e}")
 
@@ -307,9 +291,9 @@ def get_project(conn, project_id):
     """
     try:
         cur = conn.cursor()
-        cur.execute("SELECT * FROM projects where project.id=?", (project_id,))
+        cur.execute("SELECT * FROM projects where projects.id=?", (project_id,))
         row = cur.fetchone()
-        return row
+        return get_dict_result(cur, row)
     except Error as e:
         raise Error(f"Database error: {e}")
 
@@ -332,6 +316,9 @@ def migrate_database(conn):
             c.execute("ALTER TABLE reviews ADD COLUMN project_id TEXT NULL")
             c.execute("FOREIGN KEY (project_id) REFERENCES projects (id)")
             print("Added project_id column to reviews table")
+        if "latest_commit" not in columns:
+            c.execute("ALTER TABLE projects ADD COLUMN latest_commit TEXT")
+            print("Added latest_commit column to projects table")
         conn.commit()
     except Error as e:
         print(f"Migration error: {e}")
