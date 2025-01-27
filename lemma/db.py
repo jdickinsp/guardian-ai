@@ -109,6 +109,31 @@ def create_tables(conn):
 
 
 def get_dict_result(cur, data):
+    """
+    Converts database query results from tuples to dictionaries using column names as keys.
+
+    Args:
+        cur (sqlite3.Cursor): The SQLite cursor object with an active query result.
+        data (tuple or list of tuples): The row(s) retrieved from the database query.
+                                        Can be a single row (tuple) or multiple rows (list of tuples).
+
+    Returns:
+        dict or list of dicts or None:
+            - If `data` is a single row (tuple), returns a dictionary with column names as keys.
+            - If `data` is multiple rows (list of tuples), returns a list of dictionaries.
+            - If `data` is empty, returns None for a single row and an empty list for multiple rows.
+
+    Example usage:
+        # Fetching a single row
+        row = cur.fetchone()
+        result = get_dict_result(cur, row)
+        print(result)  # {'id': 1, 'name': 'Alice'}
+
+        # Fetching multiple rows
+        rows = cur.fetchall()
+        results = get_dict_result(cur, rows)
+        print(results)  # [{'id': 1, 'name': 'Alice'}, {'id': 2, 'name': 'Bob'}]
+    """
     if not data:
         return [] if isinstance(data, list) else None
 
