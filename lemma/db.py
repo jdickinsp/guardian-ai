@@ -266,7 +266,6 @@ def get_all_project_reviews(conn, project_id):
 def migrate_database(conn):
     """Add new columns to existing tables if they don't exist"""
     try:
-        print("Migrating database...")
         c = conn.cursor()
         # Check if llm_model column exists
         c.execute("PRAGMA table_info(reviews)")
@@ -289,8 +288,11 @@ def migrate_database(conn):
 
 def db_init(conn):
     """Create tables and run migrations"""
+    from lemma.embeddings.create_tables import create_embeddings_tables
+
     if conn is not None:
         create_tables(conn)
+        create_embeddings_tables(conn)
         migrate_database(conn)
     else:
         raise Exception("Error! Cannot create the database connection.")

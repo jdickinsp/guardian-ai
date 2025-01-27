@@ -62,6 +62,28 @@ def create_embeddings_tables(conn: sqlite3.Connection):
         print(f"Error creating embeddings tables: {e}")
 
 
+def delete_all_embeddings(conn):
+    """
+    Delete all records from file_chunks and file_chunk_embeddings tables.
+    """
+    try:
+        c = conn.cursor()
+
+        # Delete all records from file_chunk_embeddings
+        c.execute("DELETE FROM file_chunk_embeddings;")
+
+        # Delete all records from file_chunks
+        c.execute("DELETE FROM file_chunks;")
+
+        conn.commit()
+        print("All embeddings and file chunks deleted successfully.")
+
+    except Exception as e:
+        conn.rollback()
+        print(f"Error deleting embeddings data: {e}")
+
+
 if __name__ == "__main__":
-    conn = create_connection("bin/code_reviews.db")
+    conn = create_connection("bin/code_reviews_copy.db")
     create_embeddings_tables(conn)
+    # delete_all_embeddings(conn)

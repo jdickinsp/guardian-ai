@@ -1,3 +1,4 @@
+import os
 from pathlib import Path
 from typing import Any, Dict, List
 
@@ -23,7 +24,7 @@ def segment_codebase(
     """
     all_chunks = []
     repo_path = Path(repo_local_path).resolve()
-    for root, dirs, files in os.walk(repo_path):
+    for root, _, files in os.walk(repo_path):
         # Skip hidden folders like .git
         if root.endswith(".git"):
             continue
@@ -68,3 +69,10 @@ def segment_codebase(
                 chunk_start = chunk_end
 
     return all_chunks
+
+
+if __name__ == "__main__":
+    import pprint
+
+    segments = segment_codebase("./tmp/karpathy-llm.c-7ecd890")
+    pprint.pprint([s["chunk_index"] for s in segments])

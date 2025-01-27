@@ -1,11 +1,9 @@
 import os
 import uuid
-import shutil
+from typing import List, Dict, Any
 import faiss
 import sqlite3
-
-from pathlib import Path
-from typing import List, Dict, Any
+import ollama
 
 # If you want to call the Python API for Nomic:
 # from nomic import embedding as nomic_embedding
@@ -14,36 +12,39 @@ from typing import List, Dict, Any
 
 def create_embeddings(texts: List[str]) -> List[List[float]]:
     """
-    Create embeddings for a list of strings using Nomic.
-    Example uses the `nomic` python library.
-    Alternatively, to call the CLI `nomic-embed-text`, you might do:
+    Generates embeddings for a list of texts using the Ollama 'nomic-embed-text' model.
 
-        result = subprocess.run(
-            ["nomic-embed-text", "--some-args"],
-            input="\n".join(texts),
-            text=True,
-            capture_output=True
-        )
-        embeddings = parse_that_output(result.stdout)
+    Args:
+        texts (List[str]): A list of strings to embed.
 
-    For demonstration, we'll show a mock usage using `nomic` library
-    if you have `pip install nomic`. If not, replace with your actual pipeline.
+    Returns:
+        List[List[float]]: A list of embeddings, each being a list of floats.
     """
+    if not texts:
+        return []
+
     try:
-        # Example with Python's "nomic" library:
-        # embeddings = nomic_embedding.embed_text(texts)
-        # return embeddings
-
-        # Stub, random or zero vectors. Replace with real calls as needed.
-        dim = 384  # Just a guess for demonstration
         embeddings = []
-        for text in texts:
-            # Fake embedding:  all zeros
-            embeddings.append([0.0] * dim)
+        texts_count = len(texts)
+        for i, text in enumerate(texts):
+            if not text.strip():
+                # Skip empty or whitespace-only texts
+                print("Skipping empty text.")
+                embeddings.append([0.0] * 384)  # Assuming embedding dimension is 384
+                continue
+            response = ollama.embed(model="nomic-embed-text", input=text)
+            embedding = response["embeddings"][0]
+            if i % 20 == 0:
+                print(i / texts_count)
+            if not embedding:
+                # If embedding fails or returns empty, append a zero vector
+                print(f"Failed to generate embedding for text: '{text}'")
+                embeddings.append([0.0] * 384)
+                continue
+            embeddings.append(embedding)
         return embeddings
-
     except Exception as e:
-        print(f"Error generating embeddings with Nomic: {e}")
+        print(f"Error generating embeddings with Ollama: {e}")
         return []
 
 
@@ -127,110 +128,6 @@ def create_vector_indexes(
     return index_file
 
 
-def search_similar_code(
-    conn: sqlite3.Connection, project_id: str, new_context: str, top_k: int = 3
-) -> List[Dict[str, Any]]:
-    """
-    1) Embed the new_context using the same method as create_embeddings
-    2) Load the FAISS index from disk
-    3) Perform a similarity search
-    4) Lookup chunk metadata from DB
-    5) Return the top_k results
-    """
-    index_file = os.path.join("bin", f"{project_id}_index.faiss")
-    if not os.path.exists(index_file):
-        raise FileNotFoundError(f"FAISS index file not found: {index_file}")
-
-    # Embed the new context
-    embed_vecs = create_embeddings([new_context])  # returns a List[List[float]]
-    if not embed_vecs:
-        return []
-    query_vec = embed_vecs[0]
-
-    # Reload the FAISS index
-    index = faiss.read_index(index_file)
-
-    # Convert to float32 NumPy
-    import numpy as np
-
-    query_arr = np.array(query_vec, dtype="float32").reshape(1, -1)
-
-    # Search
-    D, I = index.search(query_arr, top_k)
-
-    # The indexes I are the row positions in the original add(...) call,
-    # which we must cross-reference with the chunk table entries we inserted.
-    # Because we inserted them in a known order, let's store row -> chunk_id somewhere,
-    # OR simply rely on the fact we inserted them in a specific sequence.
-
-    # In this example, we do not store a direct row->chunk_id map in memory,
-    # but we can retrieve them from the 'file_chunk_embeddings' table
-    # in insertion order. We do that by using an auto-increment rowid or by
-    # joining in the order they were inserted.
-
-    # For simplicity, let's add an auto-increment rowid to file_chunk_embeddings
-    # or store them in a map. Another approach: we store them in memory while building
-    # index. But for demonstration, let's do a quick approach:
-    #  - We add an integer sequence as we do c.execute, the i is in memory.
-    #  - We'll store them in an ephemeral 'embedding_order' array.
-    #
-    # A more robust approach is to store chunk_id in memory in the same order as
-    # we add vectors to the FAISS index. Then we can do chunk_id_map[I[j]].
-
-    # For demonstration, let's fetch them from DB in insertion order:
-    # This is naive, but we’ll show how it can be done. We'll assume the insertion
-    # order is stable and rowid increments in order.
-
-    # If you prefer, store a separate list [chunk_id_0, chunk_id_1, ...] in memory
-    # during index creation. For this snippet, let's do a small hack.
-
-    c = conn.cursor()
-    c.execute(
-        """
-        SELECT rowid, chunk_id 
-        FROM file_chunk_embeddings
-        WHERE chunk_id IN (SELECT id FROM file_chunks WHERE project_id=?)
-        ORDER BY rowid ASC
-    """,
-        (project_id,),
-    )
-    row_map = c.fetchall()  # e.g. [(1, 'uuid1'), (2, 'uuid2'), ...]
-
-    # row_map[i-1][1] => chunk_id
-    # We'll build a simple list of chunk_id in the insertion order
-    chunk_id_in_order = [row[1] for row in row_map]
-
-    # Now for the top_k indices
-    results = []
-    for dist, idx_val in zip(D[0], I[0]):
-        if idx_val < len(chunk_id_in_order):
-            chunk_id = chunk_id_in_order[idx_val]
-            # Retrieve the chunk row from DB
-            c.execute(
-                """
-                SELECT repo_path, file_path, chunk_index, chunk_text
-                FROM file_chunks
-                WHERE id=?
-            """,
-                (chunk_id,),
-            )
-            chunk_row = c.fetchone()
-            if chunk_row:
-                repo_path, file_path, chunk_index, chunk_text = chunk_row
-                results.append(
-                    {
-                        "chunk_id": chunk_id,
-                        "repo_path": repo_path,
-                        "file_path": file_path,
-                        "chunk_index": chunk_index,
-                        "chunk_text": chunk_text,
-                        "distance": dist,
-                    }
-                )
-
-    return results
-
-
 if __name__ == "__main__":
     from lemma.db import create_connection, db_init
     from lemma.embeddings.manage_repo import clone_github_repo
@@ -238,12 +135,10 @@ if __name__ == "__main__":
     from lemma.embeddings.segment import segment_codebase
 
     # 0) Connect to DB & ensure migrations
-    conn = create_connection("bin/code_reviews.db")
-    db_init(conn)  # creates base tables if missing
-    create_embeddings_tables(conn)  # ensures chunk-related tables exist
+    conn = create_connection("bin/code_reviews_copy.db")
+    db_init(conn)
 
     # 1) Clone a repo
-    # e.g. "https://github.com/username/some_project.git"
     test_repo_url = "https://github.com/karpathy/llm.c"
     local_repo_dir = clone_github_repo(test_repo_url)
 
@@ -251,22 +146,12 @@ if __name__ == "__main__":
     all_chunks = segment_codebase(local_repo_dir, max_chunk_size=100, ignore_tests=True)
 
     # Suppose we have a known 'project_id' in the DB:
-    # (If you don't have one, insert into projects & get the returned ID.)
-    # For demo, let's pretend we have one:
     project_id = "cb655754-dbc2-4781-a7ef-4ddbc423bc1b"
 
     # 3 & 4) Create embeddings & build FAISS index
     index_path = create_vector_indexes(conn, project_id, local_repo_dir, all_chunks)
 
-    # 5) Searching
-    query_text = "Optimize a function in c for the gpu"
-    top_results = search_similar_code(conn, project_id, query_text, top_k=3)
-
-    print("Top results:")
-    for r in top_results:
-        print(r["file_path"], "chunk:", r["chunk_index"], "dist:", r["distance"])
-
-    # Clean up cloned repo if desired
-    shutil.rmtree(local_repo_dir, ignore_errors=True)
+    # # Clean up cloned repo if desired
+    # shutil.rmtree(local_repo_dir, ignore_errors=True)
 
     conn.close()
