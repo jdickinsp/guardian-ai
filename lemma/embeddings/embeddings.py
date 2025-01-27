@@ -6,6 +6,9 @@ import sqlite3
 import ollama
 
 
+EMBEDDING_DIM = 768
+
+
 def create_embeddings(texts: List[str]) -> List[List[float]]:
     """
     Generates embeddings for a list of texts using the Ollama 'nomic-embed-text' model.
@@ -22,12 +25,12 @@ def create_embeddings(texts: List[str]) -> List[List[float]]:
     try:
         embeddings = []
         texts_count = len(texts)
-        progress = min(texts_count / 20, 1)
+        progress = max(texts_count / 20, 1)
         for i, text in enumerate(texts):
             if not text.strip():
                 # Skip empty or whitespace-only texts
                 print("Skipping empty text.")
-                embeddings.append([0.0] * 384)  # Assuming embedding dimension is 384
+                embeddings.append([0.0] * EMBEDDING_DIM)
                 continue
             response = ollama.embed(model="nomic-embed-text", input=text)
             embedding = response["embeddings"][0]
@@ -36,7 +39,7 @@ def create_embeddings(texts: List[str]) -> List[List[float]]:
             if not embedding:
                 # If embedding fails or returns empty, append a zero vector
                 print(f"Failed to generate embedding for text: '{text}'")
-                embeddings.append([0.0] * 384)
+                embeddings.append([0.0] * EMBEDDING_DIM)
                 continue
             embeddings.append(embedding)
         return embeddings

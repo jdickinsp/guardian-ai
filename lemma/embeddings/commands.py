@@ -4,7 +4,7 @@ from lemma.db import get_project
 from lemma.embeddings.manage_repo import clone_github_repo
 
 
-def create_project_embeddings(conn: sqlite3.Connection, project_id: str):
+def create_embeddings_index(conn: sqlite3.Connection, project_id: str):
     """
     look up project_id => github_repo_url
     download repo
@@ -19,5 +19,5 @@ def create_project_embeddings(conn: sqlite3.Connection, project_id: str):
     TODO: add option to use embeddings
     """
     project = get_project(conn, project_id)
-    print("project", project[2])
+    print("project", project)
     # local_repo_dir = clone_github_repo(project[2])

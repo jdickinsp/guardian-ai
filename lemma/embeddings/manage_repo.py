@@ -46,7 +46,13 @@ def clone_github_repo(repo_url: str, dest_dir: Optional[str] = None) -> str:
     repo_name = f"{owner}/{repo.replace('.git', '')}"
 
     # Initialize GitHub API client
-    g = Github(os.getenv("GITHUB_ACCESS_TOKEN"))
+    token = os.getenv("GITHUB_ACCESS_TOKEN")
+    if not token:
+        raise EnvironmentError(
+            "GITHUB_ACCESS_TOKEN is not set in environment variables."
+        )
+
+    g = Github(token)
 
     latest_commit = get_latest_commit_from_github(g, owner, repo)
 
@@ -64,8 +70,6 @@ def clone_github_repo(repo_url: str, dest_dir: Optional[str] = None) -> str:
         repo_obj: Repository = g.get_repo(repo_name)
     except Exception as e:
         raise Exception(f"Failed to access repository '{repo_name}': {e}")
-
-    print("repo_obj", repo_obj)
 
     # Determine the reference to download (default branch)
     try:
