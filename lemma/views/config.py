@@ -1,7 +1,7 @@
+import os
 from dataclasses import dataclass
 from datetime import datetime
-import os
-from typing import List, Optional, Any
+from typing import Any, List, Optional
 
 from lemma.llm_client import LLMType, string_to_enum
 

@@ -1,16 +1,18 @@
+from unittest.mock import ANY, MagicMock, Mock, patch
+
 import pytest
-from unittest.mock import ANY, Mock, patch, MagicMock
 from github import GithubException
+
 from lemma.github_api import (
-    GitHubURLIdentifier,
-    GitHubRepoHelper,
-    GitHubDiffFetcher,
-    fetch_git_diffs,
-    GitHubURLType,
     BranchDiff,
     CommitDiff,
-    PullRequestDiff,
     GitHubAPI,
+    GitHubDiffFetcher,
+    GitHubRepoHelper,
+    GitHubURLIdentifier,
+    GitHubURLType,
+    PullRequestDiff,
+    fetch_git_diffs,
 )
 
 

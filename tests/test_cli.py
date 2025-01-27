@@ -1,10 +1,11 @@
 import os
-import pytest
-from unittest.mock import patch, MagicMock, AsyncMock
-from io import StringIO
 import sys
+from io import StringIO
+from unittest.mock import AsyncMock, MagicMock, patch
 
-from lemma.cli import process_stream, cli
+import pytest
+
+from lemma.cli import cli, process_stream
 from lemma.llm_client import LLMType
 
 

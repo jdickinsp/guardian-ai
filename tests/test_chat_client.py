@@ -1,11 +1,13 @@
+from unittest.mock import AsyncMock, MagicMock, patch
+
 import pytest
-from unittest.mock import patch, MagicMock, AsyncMock
+
 from lemma.chat_client import ChatClient, ChatPrompt, LLMType
 from lemma.code_prompts import (
-    DEFAULT_PROMPT_OPTIONS,
     CODE_PROMPTS,
-    SYSTEM_PROMPT_DIFF_ENDING,
+    DEFAULT_PROMPT_OPTIONS,
     SYSTEM_PROMPT_CODE_ENDING,
+    SYSTEM_PROMPT_DIFF_ENDING,
 )
 
 

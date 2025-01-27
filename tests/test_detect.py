@@ -1,10 +1,11 @@
 import pytest
+
 from lemma.detect import (
-    get_line_count,
     get_code_height,
+    get_line_count,
     get_programming_language,
-    is_test_file,
     is_ignored_file,
+    is_test_file,
 )
 
 

@@ -12,105 +12,114 @@ def search_similar_code(
     conn: sqlite3.Connection, project_id: str, query_text: str, top_k: int = 3
 ) -> List[Dict[str, Any]]:
     """
-    1) Embed the query_text using the same method as create_embeddings
-    2) Load the FAISS index from disk
-    3) Perform a similarity search
-    4) Lookup chunk metadata from DB
-    5) Return the top_k results
+    Performs a similarity search using FAISS and retrieves corresponding code chunks.
+
+    Args:
+        conn (sqlite3.Connection): SQLite connection to the database.
+        project_id (str): The project ID to search within.
+        query_text (str): The text query to embed and search.
+        top_k (int): Number of closest matches to retrieve.
+
+    Returns:
+        List[Dict[str, Any]]: A list of similar code chunks with metadata and distances.
     """
     index_file = os.path.join("bin", f"{project_id}_index.faiss")
     if not os.path.exists(index_file):
         raise FileNotFoundError(f"FAISS index file not found: {index_file}")
 
-    # Embed the new context
+    # Embed the query text
     embed_vecs = create_embeddings([query_text])  # returns a List[List[float]]
     if not embed_vecs:
+        print("No embeddings returned for the query.")
         return []
     query_vec = embed_vecs[0]
 
+    # Convert to float32 NumPy array
     query_arr = np.array(query_vec, dtype="float32").reshape(1, -1)
 
     # Reload the FAISS index
     index = faiss.read_index(index_file)
 
-    query_arr = np.array(query_vec, dtype="float32").reshape(1, -1)
-
-    # Search
+    # Search FAISS index
     D, I = index.search(query_arr, top_k)
+    print(f"FAISS search returned distances: {D}")
+    print(f"FAISS search returned indices: {I}")
 
-    # The indexes I are the row positions in the original add(...) call,
-    # which we must cross-reference with the chunk table entries we inserted.
-    # Because we inserted them in a known order, let's store row -> chunk_id somewhere,
-    # OR simply rely on the fact we inserted them in a specific sequence.
-
-    # In this example, we do not store a direct row->chunk_id map in memory,
-    # but we can retrieve them from the 'file_chunk_embeddings' table
-    # in insertion order. We do that by using an auto-increment rowid or by
-    # joining in the order they were inserted.
-
-    # For simplicity, let's add an auto-increment rowid to file_chunk_embeddings
-    # or store them in a map. Another approach: we store them in memory while building
-    # index. But for demonstration, let's do a quick approach:
-    #  - We add an integer sequence as we do c.execute, the i is in memory.
-    #  - We'll store them in an ephemeral 'embedding_order' array.
-    #
-    # A more robust approach is to store chunk_id in memory in the same order as
-    # we add vectors to the FAISS index. Then we can do chunk_id_map[I[j]].
-
-    # For demonstration, let's fetch them from DB in insertion order:
-    # This is naive, but we’ll show how it can be done. We'll assume the insertion
-    # order is stable and rowid increments in order.
-
-    # If you prefer, store a separate list [chunk_id_0, chunk_id_1, ...] in memory
-    # during index creation. For this snippet, let's do a small hack.
-
+    # Load FAISS index mapping
     c = conn.cursor()
+    # Ensure faiss_indices is a list of integers
+    faiss_indices = [int(i) for i in I[0].tolist()]
+
+    if not faiss_indices:
+        print("No FAISS indices returned from search.")
+        return []
+    # Prepare placeholders for SQL IN clause
+    placeholders = ",".join(["?"] * len(faiss_indices))
     c.execute(
-        """
-        SELECT rowid, chunk_id 
-        FROM file_chunk_embeddings
-        WHERE chunk_id IN (SELECT id FROM file_chunks WHERE project_id=?)
-        ORDER BY rowid ASC
+        f"""
+        SELECT faiss_index, chunk_id FROM faiss_index_mapping
+        WHERE project_id = ? AND faiss_index IN ({placeholders})
     """,
-        (project_id,),
+        (project_id, *faiss_indices),
     )
-    row_map = c.fetchall()  # e.g. [(1, 'uuid1'), (2, 'uuid2'), ...]
+    mapping_rows = c.fetchall()
+    print(f"Mapping rows retrieved: {mapping_rows}")
 
-    # row_map[i-1][1] => chunk_id
-    # We'll build a simple list of chunk_id in the insertion order
-    chunk_id_in_order = [row[1] for row in row_map]
+    # Create a dictionary {faiss_index: chunk_id}
+    faiss_to_chunk = {row[0]: row[1] for row in mapping_rows}
 
-    # Now for the top_k indices
+    if not faiss_to_chunk:
+        print("No valid chunk IDs found for the given FAISS indices.")
+        return []
+
+    # Fetch chunk details based on chunk_ids
+    chunk_ids = list(faiss_to_chunk.values())
+    placeholders = ",".join(["?"] * len(chunk_ids))
+    c.execute(
+        f"""
+        SELECT id, repo_path, file_path, chunk_index, chunk_text
+        FROM file_chunks
+        WHERE id IN ({placeholders})
+        """,
+        chunk_ids,
+    )
+    chunks = {
+        row[0]: {
+            "repo_path": row[1],
+            "file_path": row[2],
+            "chunk_index": row[3],
+            "chunk_text": row[4],
+        }
+        for row in c.fetchall()
+    }
+
+    # Build the results list
     results = []
-    for dist, idx_val in zip(D[0], I[0]):
-        if idx_val < len(chunk_id_in_order):
-            chunk_id = chunk_id_in_order[idx_val]
-            # Retrieve the chunk row from DB
-            c.execute(
-                """
-                SELECT repo_path, file_path, chunk_index, chunk_text
-                FROM file_chunks
-                WHERE id=?
-            """,
-                (chunk_id,),
-            )
-            chunk_row = c.fetchone()
-            if not chunk_row:
-                print(f"Chunk ID {chunk_id} does not exist in file_chunks!")
-            if chunk_row:
-                repo_path, file_path, chunk_index, chunk_text = chunk_row
-                results.append(
-                    {
-                        "chunk_id": chunk_id,
-                        "repo_path": repo_path,
-                        "file_path": file_path,
-                        "chunk_index": chunk_index,
-                        "chunk_text": chunk_text,
-                        "distance": dist,
-                    }
-                )
-        else:
-            print(f"Index {idx_val} is out of bounds for chunk_id_in_order")
+    for dist, faiss_idx in zip(D[0], I[0]):
+        chunk_id = faiss_to_chunk.get(faiss_idx)
+        if not chunk_id:
+            print(f"No chunk_id found for FAISS index {faiss_idx}")
+            continue
+        chunk_data = chunks.get(chunk_id)
+        if not chunk_data:
+            print(f"No chunk data found for chunk_id {chunk_id}")
+            continue
+        results.append(
+            {
+                "chunk_id": chunk_id,
+                "repo_path": chunk_data["repo_path"],
+                "file_path": chunk_data["file_path"],
+                "chunk_index": chunk_data["chunk_index"],
+                "chunk_text": chunk_data["chunk_text"],
+                "distance": dist,
+            }
+        )
+
+    if not results:
+        print("No valid chunk data found for the given FAISS indices.")
+    else:
+        print(f"Found {len(results)} similar code chunks.")
+
     return results
 
 
@@ -133,7 +142,7 @@ if __name__ == "__main__":
 
     # 5) Searching
     query_text = "Optimize a function in c for the gpu"
-    project_id = "cb655754-dbc2-4781-a7ef-4ddbc423bc1b"
+    project_id = "581d39d0-ab13-444d-a8de-053f0ba6eae2"
     top_results = search_similar_code(conn, project_id, query_text, top_k=3)
 
     print("Top results:")

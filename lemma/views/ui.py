@@ -1,8 +1,8 @@
 from datetime import datetime
 from typing import Any, List, Tuple
+
 import streamlit as st
 import streamlit.components.v1 as components
-
 from db import (
     delete_review,
     get_all_project_reviews,
@@ -11,32 +11,33 @@ from db import (
     get_review_with_files,
     insert_review,
 )
+from detect import get_code_height, get_programming_language
+from github_api import (
+    BranchDiff,
+    fetch_git_diffs,
+    get_github_url_type,
+    validate_github_repo_url,
+)
+
+from lemma.views.config import (
+    AnalysisContext,
+    DiffData,
+    ModelConfig,
+    Project,
+    ReviewConfig,
+)
 from lemma.views.forms import FormOptions, ReviewFormInputs
+from lemma.views.html_templates import (
+    CODE_HIGHLIGHT_HTML_CONTENT,
+    DIFF_VIEWER_HTML_CONTENT,
+    MERMAID_HTML_CONTENT,
+)
 from lemma.views.processing import (
     generate_analysis,
     get_patches,
     save_project,
     save_review,
 )
-from lemma.views.config import (
-    AnalysisContext,
-    ModelConfig,
-    Project,
-    ReviewConfig,
-    DiffData,
-)
-from lemma.views.html_templates import (
-    DIFF_VIEWER_HTML_CONTENT,
-    CODE_HIGHLIGHT_HTML_CONTENT,
-    MERMAID_HTML_CONTENT,
-)
-from github_api import (
-    fetch_git_diffs,
-    BranchDiff,
-    get_github_url_type,
-    validate_github_repo_url,
-)
-from detect import get_code_height, get_programming_language
 
 
 async def process_review(

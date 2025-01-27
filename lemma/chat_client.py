@@ -1,9 +1,10 @@
 from dataclasses import dataclass
+
 from lemma.code_prompts import (
-    DEFAULT_PROMPT_OPTIONS,
     CODE_PROMPTS,
-    SYSTEM_PROMPT_DIFF_ENDING,
+    DEFAULT_PROMPT_OPTIONS,
     SYSTEM_PROMPT_CODE_ENDING,
+    SYSTEM_PROMPT_DIFF_ENDING,
 )
 from lemma.llm_client import ClaudeClient, LLMType, OllamaClient, OpenAIClient
 

@@ -3,12 +3,12 @@ import os
 import re
 from collections import namedtuple
 from enum import Enum
-from typing import List, Union, Dict, Optional
+from typing import Dict, List, Optional, Union
 from urllib.parse import urlparse, urlunparse
 
-from github import Github, Auth
-from github.Repository import Repository
+from github import Auth, Github
 from github.ContentFile import ContentFile
+from github.Repository import Repository
 
 from lemma.detect import is_ignored_file, is_test_file
 

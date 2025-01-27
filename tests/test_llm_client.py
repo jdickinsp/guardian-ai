@@ -1,14 +1,16 @@
-import pytest
-from unittest.mock import Mock, AsyncMock, patch
-from lemma.llm_client import (
-    LLMType,
-    string_to_enum,
-    get_default_llm_model_name,
-    OpenAIClient,
-    OllamaClient,
-    ClaudeClient,
-)
 import asyncio
+from unittest.mock import AsyncMock, Mock, patch
+
+import pytest
+
+from lemma.llm_client import (
+    ClaudeClient,
+    LLMType,
+    OllamaClient,
+    OpenAIClient,
+    get_default_llm_model_name,
+    string_to_enum,
+)
 
 
 def test_llm_type_enum():

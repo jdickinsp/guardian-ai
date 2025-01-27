@@ -6,9 +6,10 @@ from lemma.db import create_connection
 def create_embeddings_tables(conn: sqlite3.Connection):
     """
     Extend existing DB schema to store code chunks and embeddings.
-    We'll create two tables:
-    1) file_chunks: store chunk text, associated repo, file path, etc.
-    2) file_chunk_embeddings: store the vector dimension, vector data (BLOB).
+       We'll create three tables:
+       1) file_chunks: store chunk text, associated repo, file path, etc.
+       2) file_chunk_embeddings: store the vector dimension, vector data (BLOB).
+       3) faiss_index_mapping: map FAISS index integers to chunk_ids.
     """
     try:
         c = conn.cursor()
@@ -28,7 +29,7 @@ def create_embeddings_tables(conn: sqlite3.Connection):
         """
         )
 
-        # Optionally store the embeddings in a separate table
+        # Table to store embeddings for each chunk
         c.execute(
             """
             CREATE TABLE IF NOT EXISTS file_chunk_embeddings (
@@ -36,6 +37,19 @@ def create_embeddings_tables(conn: sqlite3.Connection):
                 embedding BLOB NOT NULL,
                 embedding_dim INTEGER NOT NULL,
                 PRIMARY KEY (chunk_id),
+                FOREIGN KEY (chunk_id) REFERENCES file_chunks (id)
+            );
+        """
+        )
+
+        # Table to map FAISS indices to chunk_ids
+        c.execute(
+            """
+            CREATE TABLE IF NOT EXISTS faiss_index_mapping (
+                project_id TEXT NOT NULL,
+                faiss_index INTEGER NOT NULL,
+                chunk_id TEXT NOT NULL,
+                PRIMARY KEY (project_id, faiss_index),
                 FOREIGN KEY (chunk_id) REFERENCES file_chunks (id)
             );
         """
@@ -68,13 +82,9 @@ def delete_all_embeddings(conn):
     """
     try:
         c = conn.cursor()
-
-        # Delete all records from file_chunk_embeddings
+        c.execute("DELETE FROM faiss_index_mapping;")
         c.execute("DELETE FROM file_chunk_embeddings;")
-
-        # Delete all records from file_chunks
         c.execute("DELETE FROM file_chunks;")
-
         conn.commit()
         print("All embeddings and file chunks deleted successfully.")
 
@@ -82,8 +92,14 @@ def delete_all_embeddings(conn):
         conn.rollback()
         print(f"Error deleting embeddings data: {e}")
 
+    c = conn.cursor()
+    # Free up space
+    c.execute("VACUUM;")
+    conn.commit()
+
 
 if __name__ == "__main__":
-    conn = create_connection("bin/code_reviews_copy.db")
-    create_embeddings_tables(conn)
+    # conn = create_connection("bin/code_reviews_copy.db")
+    # create_embeddings_tables(conn)
     # delete_all_embeddings(conn)
+    pass

@@ -1,12 +1,12 @@
 import os
 import random
 import zipfile
-import requests
 from pathlib import Path
 from typing import Optional
 from urllib.parse import urlparse
-from github import Github, Repository
 
+import requests
+from github import Github, Repository
 
 TMP_DIR = Path(__file__).resolve().parent.parent.parent / "tmp"
 
@@ -96,7 +96,6 @@ def clone_github_repo(repo_url: str, dest_dir: Optional[str] = None) -> str:
     # Save the ZIP file to a temporary location
     zip_name = f"repo_{random.getrandbits(32)}.zip"
     zip_path = os.path.join(dest_dir, zip_name)
-    print("zip_path", zip_path)
     try:
         with open(zip_path, "wb") as f:
             for chunk in response.iter_content(chunk_size=8192):
@@ -116,15 +115,11 @@ def clone_github_repo(repo_url: str, dest_dir: Optional[str] = None) -> str:
     os.remove(zip_path)
 
     # The extracted folder typically has a name like 'repo-commithash'
-    extracted_dirs = [
-        name
-        for name in os.listdir(dest_dir)
-        if os.path.isdir(os.path.join(dest_dir, name))
-    ]
+    extracted_dirs = repo_path_guess in os.listdir(dest_dir)
     if not extracted_dirs:
         raise Exception("Failed to extract the repository archive.")
 
-    repo_extracted_path = os.path.join(dest_dir, extracted_dirs[0])
+    repo_extracted_path = os.path.join(dest_dir, repo_path_guess)
     print(f"Repository cloned to: {repo_extracted_path}")
 
     return repo_extracted_path

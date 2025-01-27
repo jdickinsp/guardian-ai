@@ -2,11 +2,12 @@ import argparse
 import asyncio
 import os
 import sys
+
 from dotenv import load_dotenv
 
 from lemma.chat_client import ChatClient
-from lemma.llm_client import LLMType, string_to_enum, get_default_llm_model_name
 from lemma.github_api import fetch_git_diffs
+from lemma.llm_client import LLMType, get_default_llm_model_name, string_to_enum
 
 
 async def process_stream(stream, output, client_type):

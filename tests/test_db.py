@@ -1,14 +1,16 @@
-import pytest
-import sqlite3
 import os
+import sqlite3
+
+import pytest
+
 from lemma.db import (
     create_connection,
     create_tables,
-    insert_review,
-    insert_file,
     delete_review,
     get_all_reviews,
     get_review_with_files,
+    insert_file,
+    insert_review,
 )
 
 

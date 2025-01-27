@@ -1,13 +1,15 @@
 import asyncio
+
 import streamlit as st
+
+from lemma.db import create_connection, db_init
 from lemma.views.ui import (
     render_create_review_page,
     render_project_home_page,
+    render_projects_page,
     render_sidebar,
     render_view_review_page,
-    render_projects_page,
 )
-from lemma.db import create_connection, db_init
 
 # Set page configuration
 st.set_page_config(
