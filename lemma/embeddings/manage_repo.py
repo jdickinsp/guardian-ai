@@ -6,10 +6,17 @@ from pathlib import Path
 from typing import Optional
 from urllib.parse import urlparse
 from github import Github, Repository
-from git import Repo
 
 
-tmp_dir = Path(__file__).resolve().parent.parent.parent / "tmp"
+TMP_DIR = Path(__file__).resolve().parent.parent.parent / "tmp"
+
+
+def get_latest_commit_from_github(github_client, repo_owner, repo_name):
+    """Get the latest commit SHA from GitHub API."""
+    print(f"{repo_owner}/{repo_name}")
+    repo = github_client.get_repo(f"{repo_owner}/{repo_name}")
+    latest_commit = repo.get_branch(repo.default_branch).commit.sha
+    return latest_commit
 
 
 def clone_github_repo(repo_url: str, dest_dir: Optional[str] = None) -> str:
@@ -39,8 +46,19 @@ def clone_github_repo(repo_url: str, dest_dir: Optional[str] = None) -> str:
     repo_name = f"{owner}/{repo.replace('.git', '')}"
 
     # Initialize GitHub API client
-    github_token = os.getenv("GITHUB_ACCESS_TOKEN")
-    g = Github(github_token)
+    g = Github(os.getenv("GITHUB_ACCESS_TOKEN"))
+
+    latest_commit = get_latest_commit_from_github(g, owner, repo)
+
+    # Create destination directory if not provided
+    if dest_dir is None:
+        dest_dir = TMP_DIR
+    os.makedirs(dest_dir, exist_ok=True)
+
+    repo_path_guess = os.path.join(dest_dir, f"{owner}-{repo}-{latest_commit[:7]}")
+    if os.path.exists(repo_path_guess):
+        print(f"Repo already exists in {repo_path_guess}")
+        return repo_path_guess
 
     try:
         repo_obj: Repository = g.get_repo(repo_name)
@@ -62,11 +80,6 @@ def clone_github_repo(repo_url: str, dest_dir: Optional[str] = None) -> str:
         )
     except Exception as e:
         raise Exception(f"Failed to get archive link for '{repo_name}': {e}")
-
-    # Create destination directory if not provided
-    if dest_dir is None:
-        dest_dir = tmp_dir
-    os.makedirs(dest_dir, exist_ok=True)
 
     # Download the ZIP archive
     try:
@@ -113,25 +126,6 @@ def clone_github_repo(repo_url: str, dest_dir: Optional[str] = None) -> str:
     return repo_extracted_path
 
 
-def update_repository(repo_local_path: str):
-    """
-    Update the local repository by pulling the latest changes.
-
-    Args:
-        repo_local_path (str): The local path to the cloned repository.
-
-    Raises:
-        Exception: If updating fails.
-    """
-    try:
-        repo = Repo(repo_local_path)
-        origin = repo.remotes.origin
-        origin.pull()
-        print(f"Repository at {repo_local_path} updated successfully.")
-    except Exception as e:
-        raise Exception(f"Failed to update repository '{repo_local_path}': {e}")
-
-
 if __name__ == "__main__":
     import sys
 
@@ -140,7 +134,7 @@ if __name__ == "__main__":
         sys.exit(1)
 
     repo_url = sys.argv[1]
-    dest_dir = "../../tmp"
+    dest_dir = None
 
     try:
         cloned_path = clone_github_repo(repo_url, dest_dir)

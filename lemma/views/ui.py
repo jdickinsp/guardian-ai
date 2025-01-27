@@ -183,17 +183,18 @@ def format_html_with_scrollbars(content: str) -> str:
 
 
 def get_review_title(review):
+    limit = 12
     if review[8]:
         if review[8] == "file_path":
-            return review[3] + " " + review[2].split("/")[-1]
+            return review[3] + " " + review[2].split("/")[-1][:limit]
         elif review[8] == "folder_path":
-            return review[3] + " /" + review[2].split("/")[-1]
+            return review[3] + " /" + review[2].split("/")[-1][:limit]
         elif review[8] == "branch":
-            return review[3] + " " + review[2].split("/")[-1]
+            return review[3] + " " + review[2].split("/")[-1][:limit]
         elif review[8] == "pull_request":
-            return review[3] + " pull/" + review[2].split("/")[-1]
+            return review[3] + " pull/" + review[2].split("/")[-1][:limit]
         elif review[8] == "commit":
-            return review[3] + " " + review[2].split("/")[-1][:7]
+            return review[3] + " " + review[2].split("/")[-1][:limit]
     title = (
         review[4][:22] + "..."
         if review[4] and len(review[4]) > 22

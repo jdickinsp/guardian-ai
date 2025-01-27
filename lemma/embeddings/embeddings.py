@@ -11,77 +11,6 @@ from typing import List, Dict, Any
 # from nomic import embedding as nomic_embedding
 # from nomic import Atlas
 
-from lemma.db import create_connection, db_init
-from lemma.detect import is_ignored_file
-from lemma.embeddings.manage_repo import clone_github_repo
-from lemma.embeddings.create_tables import create_embeddings_tables
-
-
-def segment_codebase(
-    repo_local_path: str, max_chunk_size: int = 200, ignore_tests: bool = True
-) -> List[Dict[str, Any]]:
-    """
-    Recursively walk the local repo directory, skipping ignored files,
-    and segment each file's content into chunks of up to `max_chunk_size` lines.
-
-    Returns a list of dicts:
-    [
-      {
-         'file_path': 'relative/path/to/file.py',
-         'chunk_index': 0,
-         'chunk_text': '...some lines of code...',
-      },
-      ...
-    ]
-    """
-    all_chunks = []
-    repo_path = Path(repo_local_path).resolve()
-    for root, dirs, files in os.walk(repo_path):
-        # Skip hidden folders like .git
-        if root.endswith(".git"):
-            continue
-
-        for filename in files:
-            full_path = Path(root) / filename
-            rel_path = full_path.relative_to(repo_path).as_posix()
-
-            # Check if we should skip this file
-            if is_ignored_file(filename):
-                continue
-            if ignore_tests and "test" in filename.lower():
-                # Very naive skipping logic.
-                # In lemma.detect.is_test_file, there's a more robust check if needed.
-                continue
-
-            # Read the file
-            try:
-                with open(full_path, "r", encoding="utf-8", errors="ignore") as f:
-                    lines = f.readlines()
-            except Exception as e:
-                print(f"Skipping file {rel_path}, error reading: {e}")
-                continue
-
-            # Break into line-based chunks
-            chunk_start = 0
-            chunk_index = 0
-            while chunk_start < len(lines):
-                chunk_end = chunk_start + max_chunk_size
-                chunk_lines = lines[chunk_start:chunk_end]
-                chunk_text = "".join(chunk_lines)
-
-                all_chunks.append(
-                    {
-                        "file_path": rel_path,
-                        "chunk_index": chunk_index,
-                        "chunk_text": chunk_text,
-                    }
-                )
-
-                chunk_index += 1
-                chunk_start = chunk_end
-
-    return all_chunks
-
 
 def create_embeddings(texts: List[str]) -> List[List[float]]:
     """
@@ -303,6 +232,10 @@ def search_similar_code(
 
 
 if __name__ == "__main__":
+    from lemma.db import create_connection, db_init
+    from lemma.embeddings.manage_repo import clone_github_repo
+    from lemma.embeddings.create_tables import create_embeddings_tables
+    from lemma.embeddings.segment import segment_codebase
 
     # 0) Connect to DB & ensure migrations
     conn = create_connection("bin/code_reviews.db")
