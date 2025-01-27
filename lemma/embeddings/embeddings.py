@@ -11,7 +11,7 @@ from typing import List, Dict, Any
 # from nomic import embedding as nomic_embedding
 # from nomic import Atlas
 
-from lemma.db import create_connection, db_init, Error, migrate_database
+from lemma.db import create_connection, db_init
 from lemma.detect import is_ignored_file
 from lemma.embeddings.manage_repo import clone_github_repo
 from lemma.embeddings.create_tables import create_embeddings_tables
