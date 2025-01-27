@@ -183,7 +183,7 @@ def format_html_with_scrollbars(content: str) -> str:
 
 
 def get_review_title(review):
-    limit = 12
+    limit = 14
     github_url = review["github_url"]
     github_url_type = review["github_url_type"]
     prompt_template = review["prompt_template"]
@@ -198,10 +198,10 @@ def get_review_title(review):
         elif github_url_type == "pull_request":
             return prompt_template + " pull/" + github_url.split("/")[-1][:limit]
         elif github_url_type == "commit":
-            return prompt_template + " " + github_url.split("/")[-1][:limit]
+            return prompt_template + " " + github_url.split("/")[-1][:7]
     title = (
-        prompt[:20] + "..."
-        if prompt and len(prompt) > 20
+        prompt[:26] + "..."
+        if prompt and len(prompt) > 26
         else (prompt if prompt else prompt_template)
     )
     return title
@@ -230,7 +230,7 @@ async def render_sidebar(conn):
             cols = st.columns([10])
             title = get_review_title(review)
             if cols[0].button(
-                f"📄 {title}", key=f"review-{review['id']}", use_container_width=True
+                f"{title}", key=f"review-{review['id']}", use_container_width=True
             ):
                 st.session_state.selected_review_id = review["id"]
                 st.session_state.current_view = "review"
