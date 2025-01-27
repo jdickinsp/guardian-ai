@@ -108,13 +108,16 @@ def create_tables(conn):
         raise Error(f"Database error: {e}")
 
 
-def get_dict_results(cur, rows):
+def get_dict_result(cur, data):
+    if not data:
+        return [] if isinstance(data, list) else None
+
     columns = [desc[0] for desc in cur.description]
-    if not isinstance(rows, list):
-        result = dict(zip(columns, rows))
+
+    if isinstance(data, list):
+        return [dict(zip(columns, row)) for row in data]  # Handle multiple rows
     else:
-        result = [dict(zip(columns, row)) for row in rows]
-    return result
+        return dict(zip(columns, data))  # Handle a single row
 
 
 def insert_review(
@@ -215,7 +218,7 @@ def get_all_reviews(conn):
         cur = conn.cursor()
         cur.execute("SELECT * FROM reviews order by reviews.created_at DESC")
         rows = cur.fetchall()
-        return get_dict_results(cur, rows)
+        return get_dict_result(cur, rows)
     except Error as e:
         raise Error(f"Database error: {e}")
 
@@ -229,13 +232,13 @@ def get_review_with_files(conn, review_id):
         # Fetch the review
         cur.execute("SELECT * FROM reviews WHERE id=?", (review_id,))
         review = cur.fetchone()
-        review_results = get_dict_results(cur, review)
+        review_results = get_dict_result(cur, review)
 
         if review:
             # Fetch associated files
             cur.execute("SELECT * FROM files WHERE review_id=?", (review_id,))
             files = cur.fetchall()
-            return review_results, get_dict_results(cur, files)
+            return review_results, get_dict_result(cur, files)
         else:
             print("Review not found")
             return None, None

@@ -140,8 +140,8 @@ def test_get_all_reviews(temp_db):
 
     reviews = get_all_reviews(temp_db)
     assert len(reviews) == 2
-    assert reviews[0][1] == "Test Review 2"  # Assuming DESC order
-    assert reviews[1][1] == "Test Review 1"
+    assert reviews[0]["name"] == "Test Review 2"  # Assuming DESC order
+    assert reviews[1]["name"] == "Test Review 1"
 
 
 def test_get_all_reviews_empty(temp_db):
@@ -168,10 +168,10 @@ def test_get_review_with_files(temp_db):
 
     review, files = get_review_with_files(temp_db, review_id)
     assert review is not None
-    assert review[1] == "Test Review"
+    assert review["name"] == "Test Review"
     assert len(files) == 2
-    assert files[0][2] == "test1.py"
-    assert files[1][2] == "test2.py"
+    assert files[0]["file_name"] == "test1.py"
+    assert files[1]["file_name"] == "test2.py"
 
 
 def test_get_review_with_files_nonexistent(temp_db):
