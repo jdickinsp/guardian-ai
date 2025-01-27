@@ -29,26 +29,14 @@ def search_similar_code(
     query_vec = embed_vecs[0]
 
     query_arr = np.array(query_vec, dtype="float32").reshape(1, -1)
-    print(f"Query vector (first 10 elements): {query_arr[0][:10]}")
-    print(f"Query vector norm: {np.linalg.norm(query_arr)}")
 
     # Reload the FAISS index
     index = faiss.read_index(index_file)
-    inspect_faiss_index(index)
-    print("Index total vectors:", index.ntotal)
-    print("Index dimension:", index.d)
-    print("Query vector dimension:", len(query_vec))
 
     query_arr = np.array(query_vec, dtype="float32").reshape(1, -1)
 
     # Search
     D, I = index.search(query_arr, top_k)
-
-    # After FAISS search
-    print("Distances (D):", D)
-    print("Indices (I):", I)
-    print("First row of distances:", D[0])
-    print("First row of indices:", I[0])
 
     # The indexes I are the row positions in the original add(...) call,
     # which we must cross-reference with the chunk table entries we inserted.
@@ -92,17 +80,11 @@ def search_similar_code(
     # We'll build a simple list of chunk_id in the insertion order
     chunk_id_in_order = [row[1] for row in row_map]
 
-    print(f"Total chunk IDs in order: {len(chunk_id_in_order)}")  # Should be 320
-    print("First 10 chunk IDs:", chunk_id_in_order[:10])
-    print("Last 10 chunk IDs:", chunk_id_in_order[-10:])
-
     # Now for the top_k indices
     results = []
     for dist, idx_val in zip(D[0], I[0]):
-        print(f"FAISS returned index: {idx_val} with distance: {dist}")
         if idx_val < len(chunk_id_in_order):
             chunk_id = chunk_id_in_order[idx_val]
-            print(f"Mapped chunk_id: {chunk_id}")
             # Retrieve the chunk row from DB
             c.execute(
                 """
@@ -117,9 +99,6 @@ def search_similar_code(
                 print(f"Chunk ID {chunk_id} does not exist in file_chunks!")
             if chunk_row:
                 repo_path, file_path, chunk_index, chunk_text = chunk_row
-                print(
-                    f"Retrieved chunk: {chunk_id}, Path: {file_path}, Index: {chunk_index}"
-                )
                 results.append(
                     {
                         "chunk_id": chunk_id,
@@ -132,7 +111,6 @@ def search_similar_code(
                 )
         else:
             print(f"Index {idx_val} is out of bounds for chunk_id_in_order")
-
     return results
 
 

@@ -5,10 +5,6 @@ import faiss
 import sqlite3
 import ollama
 
-# If you want to call the Python API for Nomic:
-# from nomic import embedding as nomic_embedding
-# from nomic import Atlas
-
 
 def create_embeddings(texts: List[str]) -> List[List[float]]:
     """
@@ -26,6 +22,7 @@ def create_embeddings(texts: List[str]) -> List[List[float]]:
     try:
         embeddings = []
         texts_count = len(texts)
+        progress = min(texts_count / 20, 1)
         for i, text in enumerate(texts):
             if not text.strip():
                 # Skip empty or whitespace-only texts
@@ -34,8 +31,8 @@ def create_embeddings(texts: List[str]) -> List[List[float]]:
                 continue
             response = ollama.embed(model="nomic-embed-text", input=text)
             embedding = response["embeddings"][0]
-            if i % 20 == 0:
-                print(i / texts_count)
+            if i % progress == 0:
+                print("progess: ", ((i + 1) / texts_count) * 100)
             if not embedding:
                 # If embedding fails or returns empty, append a zero vector
                 print(f"Failed to generate embedding for text: '{text}'")
